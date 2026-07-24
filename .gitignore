@@ -16,20 +16,13 @@ Thumbs.db
 *.log
 logs/
 
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
-dist/
-build/
-*.egg-info/
-
 # Node
 node_modules/
-.next/
-out/
+dist/
+dist-ssr/
 coverage/
+*.local
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/

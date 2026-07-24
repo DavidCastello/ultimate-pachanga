@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new push to the same branch makes older runs irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Lint, test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run format:check
+
+      - run: npm run test:run
+
+      - run: npm run build
+
+  database:
+    name: Migrations and pgTAP tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Applies every migration and then seed.sql, so a broken migration fails
+      # here rather than against the production database.
+      - name: Start local Supabase stack
+        run: supabase start
+
+      - name: Run pgTAP tests
+        run: supabase test db
+
+      - name: Dump stack logs on failure
+        if: failure()
+        run: supabase status && docker ps -a
