@@ -10,13 +10,14 @@ even though the interface shows one.
 
 ## Status
 
-**Stage 0 of 4 complete** — project scaffold, tooling and CI.
+**Stages 0–1 of 4 complete** — scaffold, tooling, CI, and the full database
+layer (schema, RLS, scoring, views, seed data, 90 pgTAP assertions).
 
 | Stage | Scope                                                | State      |
 | ----- | ---------------------------------------------------- | ---------- |
 | 0     | Vite + React + shadcn/ui scaffold, linting, CI       | ✅ Done    |
-| 1     | Database schema, RLS, scoring functions, views, seed | ⏳ Next    |
-| 2     | Auth, routing, players and player cards              | ⏳ Planned |
+| 1     | Database schema, RLS, scoring functions, views, seed | ✅ Done    |
+| 2     | Auth, routing, players and player cards              | ⏳ Next    |
 | 3     | Matches and CSV results import                       | ⏳ Planned |
 | 4     | Rankings, dashboard, admin settings                  | ⏳ Planned |
 
@@ -69,10 +70,15 @@ npm run db:status  # copy API URL and the anon/publishable key
 
 ```bash
 # .env.local
-VITE_SUPABASE_URL=http://127.0.0.1:54321
-VITE_SUPABASE_PUBLISHABLE_KEY=<anon key from db:status>
+VITE_SUPABASE_URL=http://127.0.0.1:54421
+VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key from db:status>
 VITE_APP_NAME=Roco Summer League
 ```
+
+> The local API runs on **54421**, not Supabase's usual 54321, because another
+> process already occupies 54321 on the maintainer's machine. Change
+> `[api].port` in `supabase/config.toml` if you prefer the default, and keep
+> `VITE_SUPABASE_URL` in step.
 
 Then run the app:
 
