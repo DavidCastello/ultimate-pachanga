@@ -137,8 +137,16 @@ db-types: ## Regenerate src/types/database.ts from the schema
 # on past a failed statement and report success.
 # ---------------------------------------------------------------------------
 
+# Exported rather than interpolated, and read as "$$PROD_DB_URL" below. Writing
+# $(PROD_DB_URL) into a recipe pastes the password into a line the shell then
+# evaluates, so a `$` in it expands to an undefined variable and psql receives a
+# truncated password — reported as "password authentication failed", which sends
+# you looking in entirely the wrong place. `export` also covers
+# `make prod-load PROD_DB_URL=...`, which otherwise would not reach the recipe.
+export PROD_DB_URL
+
 define require_prod_db_url
-	@test -n "$(PROD_DB_URL)" || { \
+	@test -n "$$PROD_DB_URL" || { \
 	  echo "PROD_DB_URL is not set."; \
 	  echo ""; \
 	  echo "Take the connection string from the Supabase dashboard under"; \
@@ -158,17 +166,17 @@ endef
 
 prod-roster: ## Load the real roster into the deployed database
 	$(require_prod_db_url)
-	psql "$(PROD_DB_URL)" -v ON_ERROR_STOP=1 -f $(PROD_DIR)/01_roster.sql
+	psql "$$PROD_DB_URL" -v ON_ERROR_STOP=1 -f $(PROD_DIR)/01_roster.sql
 
 prod-fixtures: ## Load the real matches and squads
 	$(require_prod_db_url)
-	psql "$(PROD_DB_URL)" -v ON_ERROR_STOP=1 -f $(PROD_DIR)/02_fixtures.sql
+	psql "$$PROD_DB_URL" -v ON_ERROR_STOP=1 -f $(PROD_DIR)/02_fixtures.sql
 
 # Requires the owner account to have registered: importing results goes through
 # import_match_scores, which only administrators may call.
 prod-results: ## Import the real match results
 	$(require_prod_db_url)
-	psql "$(PROD_DB_URL)" -v ON_ERROR_STOP=1 -f $(PROD_DIR)/03_results.sql
+	psql "$$PROD_DB_URL" -v ON_ERROR_STOP=1 -f $(PROD_DIR)/03_results.sql
 
 prod-load: prod-roster prod-fixtures prod-results ## All three, in order
 
