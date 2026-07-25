@@ -10,6 +10,12 @@ a running Docker daemon.
 CI runs exactly these, so run them locally first:
 
 ```bash
+make verify        # check, both test suites and the build
+```
+
+Or individually:
+
+```bash
 npm run lint
 npm run format:check
 npm run test:run
@@ -68,7 +74,7 @@ heading element so the document outline stays navigable.
 
 ## What not to commit
 
-- `.env` / `.env.local` — only `.env.example` is tracked.
+- `.env`, `.env.local`, `.env.cloud.local` — only `.env.example` is tracked.
 - Supabase secret or service-role keys, anywhere, ever.
 - Third-party football assets: EA/FIFA trademarks, club crests, official card
   templates, or player photography you don't have permission to use.
