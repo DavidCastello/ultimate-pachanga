@@ -160,7 +160,7 @@ Safe to edit by hand, because nothing is derived from it:
 | ------------------- | --------------------------------------------------------------- |
 | `players`           | names, `nickname`, `preferred_position`, `is_active`, `user_id` |
 | `matches`           | `title`, `location`, `played_at`, team names, formations        |
-| `match_players`     | `team_side`, `pitch_slot`, `attendance_status`                  |
+| `match_players`     | `team_side`, `pitch_slot`                                       |
 | `leagues`           | `title`, `market_constant_gbp`                                  |
 | `league_members`    | `role`                                                          |
 | `league_metrics`    | labels, `display_order`, `is_active`                            |

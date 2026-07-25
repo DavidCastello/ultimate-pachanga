@@ -74,14 +74,14 @@ values
    '66666666-6666-4666-8666-000000000001', 'P4', 'Sitio',
    now() - interval '10 days', 'A', 'B', 'scored', now());
 
-insert into public.match_players (match_id, player_id, attendance_status)
-select m.id, '77777777-7777-4777-8777-000000000001', 'played'
+insert into public.match_players (match_id, player_id)
+select m.id, '77777777-7777-4777-8777-000000000001'
 from public.matches m
 where m.league_id = '66666666-6666-4666-8666-000000000001';
 
-insert into public.match_players (match_id, player_id, attendance_status)
+insert into public.match_players (match_id, player_id)
 values ('88888888-8888-4888-8888-000000000004',
-        '77777777-7777-4777-8777-000000000002', 'played');
+        '77777777-7777-4777-8777-000000000002');
 
 -- Scores 7.0, 8.0, 6.0 then a latest of 9.5. metric_scores are set so the
 -- averages land exactly on those figures.

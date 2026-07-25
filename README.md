@@ -1,7 +1,7 @@
 # Ultimate Pachanga — Roco Summer League
 
 Web app for running an amateur Fútbol 7 league: players, matches, squad
-selection, CSV-based post-match scoring, rankings and calculated market values,
+selection, CSV-based post-match scoring, statistics and calculated market values,
 presented as football cards.
 
 Built for a single league (_Liga de verano roco_) and roughly 20 players, on
@@ -12,7 +12,7 @@ even though the interface shows one.
 
 **The MVP is feature-complete locally.** Register and sign in, browse the roster
 as football cards, create matches and pick squads, score them by CSV, and read
-the rankings — with league settings and member management for administrators.
+the statistics — with league settings and member management for administrators.
 
 | Stage | Scope                                                | State   |
 | ----- | ---------------------------------------------------- | ------- |
@@ -23,17 +23,20 @@ the rankings — with league settings and member management for administrators.
 | 4     | Rankings, dashboard, admin settings, members         | ✅ Done |
 | 5     | Accounts linked to players, join flow, own profile   | ✅ Done |
 | 6     | Goals, victories, sum-based scores, relative ratings | ✅ Done |
+| 7     | Statistics: podiums, palmarés, evolution and radar   | ✅ Done |
+| 8     | Scores editable per player from the match page       | ✅ Done |
+| 9     | Self-service convocatorias and team balancing        | ✅ Done |
 
-Tests: 249 frontend (Vitest), 149 database (pgTAP). Stages 0–4 were verified in
+Tests: 314 frontend (Vitest), 170 database (pgTAP). Stages 0–4 were verified in
 Chrome at both desktop and 375 px: every page renders, nothing scrolls
-horizontally, and a real pointer drag rearranges a line-up and persists it. The
-stage 5 and 6 changes — joining, the profile page, and the reworked scoring —
-are covered by tests but have not had that manual pass yet.
+horizontally, and a real pointer drag rearranges a line-up and persists it.
+Stages 5, 6 and 9 — joining, the profile page, the reworked scoring, and signing
+yourself up for a match — are covered by tests but have not had that manual pass
+yet.
 
-Not yet done: deployment. The app runs against a local Supabase stack; pushing
-it to Supabase Cloud and Cloudflare Pages is the remaining step. The real
-league's data is transcribed and rehearsed in `supabase/production/`, waiting
-for a project to load it into.
+The database is deployed. The schema, the 22 players, the four played matches
+and all 59 scores are live on Supabase; the frontend on Cloudflare Pages is the
+remaining step.
 
 ## Technology
 
@@ -48,7 +51,7 @@ for a project to load it into.
 | CSV            | Papa Parse                             |
 | Database       | Supabase PostgreSQL                    |
 | Authentication | Supabase Auth (email + password)       |
-| Player images  | Supabase Storage                       |
+| Photographs    | Supabase Storage (players and matches) |
 | Business logic | PostgreSQL functions and views         |
 | Authorization  | PostgreSQL Row Level Security          |
 | Tests          | Vitest + React Testing Library + pgTAP |
@@ -120,8 +123,9 @@ start rather than falling back to the local database if the file is missing,
 because silently editing the production league while believing you are on a
 scratch database is the one failure worth being loud about.
 
-No deployed project exists yet, so `make dev` will stop with instructions until
-one does.
+Running the database is a subject of its own — the two environments, changing
+the schema safely, how sign-in and email confirmation work — and it has its own
+plain-language guide in [`supabase/README.md`](supabase/README.md).
 
 ## Commands
 
@@ -170,6 +174,10 @@ dcastellotejera@gmail.com  /  pachanga
 It arrives as an administrator with no player claimed, which is deliberate — the
 join screen is the first thing you see, and it is part of the app.
 
+Registering a _second_ local account does need a confirmation, because email
+confirmation is on locally so that development rehearses production. Nothing
+leaves the machine: the message is waiting at http://127.0.0.1:54324.
+
 > `supabase db reset` replaces the auth container but leaves the API gateway
 > routing to the old one, so sign-in answers **502 Bad Gateway** afterwards.
 > `make db-reset` restarts the gateway for you; `npm run db:reset` does not, and
@@ -184,7 +192,7 @@ src/
 │   ├── ui/         shadcn/ui primitives (vendored, kept close to upstream)
 │   └── ...         application components (PlayerCard, MatchCard, ...)
 ├── features/       auth, onboarding, league, players, matches, results,
-│                   rankings
+│                   stats
 ├── hooks/
 ├── lib/            supabase client, csv, scoring, formatting
 ├── pages/
@@ -194,7 +202,11 @@ supabase/
 ├── production/     the real league's roster, fixtures and results
 ├── seeds/          development-only: the owner's account, one upcoming fixture
 ├── tests/          pgTAP
-└── config.toml
+├── templates/      the confirmation email
+├── config.toml     settings for the local stack only
+└── README.md       running the database, and how sign-in works
+docs/
+└── calculos.md     every calculation the app makes, in detail (Spanish)
 ```
 
 **The development database is the production database.** `[db.seed] sql_paths`
@@ -208,6 +220,11 @@ the real league does not have and half the app needs.
 Neither of those reaches production. `supabase db push` carries migrations only.
 
 ## Scoring model
+
+This section is the summary. Every figure the app shows — how it is derived, in
+what order, what moves when a result is corrected, and which numbers are stored
+versus recomputed on read — is documented at length, in Spanish, in
+[`docs/calculos.md`](docs/calculos.md).
 
 Metrics and attributes are configured per league in the database, not hardcoded.
 The defaults are four 0–10 metrics (`attack`, `defence`, `tactics`, `physical`)
@@ -239,8 +256,10 @@ Where each formula lives, because three of them are easy to lose:
 | Market value  | view `player_market_values`, migration 009 — derived on every read  |
 | Card rating   | `to_card_rating` + the same view — derived on every read            |
 
-`src/lib/scoring.ts` mirrors the first of those so the upload dialog can preview
-a file before importing it. It is display-only, and it has to move whenever the
+`src/lib/scoring.ts` mirrors two of those. The final score, so the upload
+dialog can preview a file before importing it; the card rating, so the
+evolution chart can rebuild what each rating _was_ after every past jornada,
+which nothing stores. Both are display-only, and both have to move whenever the
 migration does.
 
 That final score is stored has a consequence worth remembering: changing the
@@ -283,7 +302,7 @@ over a 0–10 metric, still presentation only.
 
 ## Scoring a match
 
-1. An administrator creates the match and selects the squad.
+1. An administrator creates the match; the convocatoria fills up (see below).
 2. **Download CSV** produces a template with one row per convocated player.
 3. Fill in the score columns, `Goles`, and `Victoria` (1, 0 or 0,5). Leave
    `Atributos` blank or list awards separated by `|`, e.g. `MVP|Puskas`.
@@ -295,6 +314,16 @@ over a 0–10 metric, still presentation only.
 
 Re-uploading a scored match corrects it: scores are replaced and a player's
 attribute set is rewritten wholesale, rather than accumulating.
+
+A CSV is how a whole match arrives; single corrections do not need one. On the
+match page an administrator gets an **Editar** button beside every result — and a
+**Puntuar** button beside every convocated player still without one — which opens
+that player's metrics, goals, result and attributes, previews the arithmetic, and
+saves. It calls the same function with a single row, so the two routes cannot
+disagree about what a valid score is, and either of them marks the match as
+scored. Line-ups are rearranged on the same page, by dragging a card or tapping
+two of them; that moves players between slots, sides and the bench, and touches
+no score.
 
 The parser is deliberately forgiving where it costs nothing — accents are
 optional in headers and attribute names (`Tactica` matches `Táctica`, `Lesion`
@@ -331,17 +360,70 @@ and the formation describes the six outfielders.
 
 Each team's formation is chosen independently.
 
-Administrators can rearrange a line-up by **dragging one player onto another**,
-which swaps them. Tapping one and then the other does the same thing and is
-easier on a phone; keyboard users get the same via Enter, with Escape to cancel.
-Swaps work across both teams and the bench, so moving someone between sides or
-on and off is one gesture. Members see the same pitch, read-only.
+A line-up is rearranged by **dragging one player onto another**, which swaps
+them. Tapping one and then the other does the same thing and is easier on a
+phone; keyboard users get the same via Enter, with Escape to cancel. Swaps work
+across both teams and the bench, so moving someone between sides or on and off is
+one gesture — and tapping a card and then a free position is how a player places
+themselves.
+
+**Before a match is played anyone can do this**, not just administrators: sorting
+the teams out is a group activity. Once it has been played the line-up is the
+record of who played where, and only an administrator may still correct it. The
+formation is always the administrator's, because it lives on `matches`.
 
 Positions are stored per match, so an arrangement survives a reload. The
 database enforces one player per position per side.
 
 Dragging uses Pointer Events rather than HTML5 drag-and-drop, which does not
 fire on touch devices at all.
+
+## Convocatorias and balanced teams
+
+A convocatoria is two things and no more: **who is on the list, and which team
+they play for.** There is no attendance flag to keep up to date — whether
+somebody turned out is answered by their score, and somebody who drops out is
+taken off the list. Migration 012 removed the four unread states that used to be
+there.
+
+Who is coming is settled before anything else, and everyone can take part:
+
+- **Apuntarme** signs the signed-in player up for a match still to be played.
+  They land on the bench with no side, and place themselves by tapping a free
+  position.
+- An administrator opens **Convocatoria** and adds people in bulk from a
+  dropdown — tick names, press _Convocar_ — with no attempt to decide the teams.
+  Everyone arrives unassigned.
+- **Nobody but an administrator removes anyone.** Not even yourself: signing up
+  and then disappearing an hour before kickoff is a conversation, not a button.
+- Once a match has been played the squad is closed to everybody, administrator
+  included. It is the record of who turned up and the scores hang off it; an
+  administrator who genuinely has to reopen it sets the match back to
+  `scheduled` first.
+
+### Equilibrar equipos
+
+One press splits the convocatoria into two sides whose **total market value is as
+close as possible**, then lays both out on their pitches: goalkeepers in goal,
+the rest most expensive first, and whoever does not fit on the bench.
+
+The formula lives in **`src/lib/teamBalance.ts`** — in the browser, deliberately,
+unlike every scoring formula in this codebase. A team split is a suggestion
+rather than a fact: any partition is a legal line-up, so there is nothing for the
+database to validate, and the result is written through the same `saveLineup`
+path a drag uses. What it minimises is the absolute gap between the two totals
+with the squads the same size, bench included, searched exhaustively by
+branch-and-bound over descending values — the optimum, not a greedy
+approximation, and covered against a brute-force reference in
+`teamBalance.test.ts`.
+
+The values themselves are the database's: `player_cards.market_value_gbp` from
+`public.player_market_values`. A debutant is not worth zero there — the view
+falls back to the league's average — so a new player is balanced as an average
+one rather than as dead weight.
+
+The button is **visible to everyone and enabled only for administrators**, with a
+tooltip saying so. Hiding it would just produce the question in the group chat.
 
 ## Accounts and players
 
@@ -365,17 +447,22 @@ in `app.owner_email()`. That account is an administrator from its first
 sign-in and still picks which player it is, like everyone else. Every other
 account joins as a member. Nothing depends on who registers first any more.
 
-| Can                                         | Member | Admin |
-| ------------------------------------------- | :----: | :---: |
-| View the league, players, matches, rankings |   ✅   |  ✅   |
-| Edit their own name, nickname, position     |   ✅   |  ✅   |
-| Upload their own photograph                 |   ✅   |  ✅   |
-| Create, edit and deactivate any player      |   —    |  ✅   |
-| Upload any player's photograph              |   —    |  ✅   |
-| Create and edit matches, pick squads        |   —    |  ✅   |
-| Download templates and import results       |   —    |  ✅   |
-| Change league settings                      |   —    |  ✅   |
-| Manage members and roles                    |   —    |  ✅   |
+| Can                                       | Member | Admin |
+| ----------------------------------------- | :----: | :---: |
+| View the league, players, matches, stats  |   ✅   |  ✅   |
+| Edit their own name, nickname, position   |   ✅   |  ✅   |
+| Upload their own photograph               |   ✅   |  ✅   |
+| Sign themselves up for an unplayed match  |   ✅   |  ✅   |
+| Arrange an unplayed line-up               |   ✅   |  ✅   |
+| Create, edit and deactivate any player    |   —    |  ✅   |
+| Upload any player's photograph            |   —    |  ✅   |
+| Create and edit matches                   |   —    |  ✅   |
+| Call up or remove anybody                 |   —    |  ✅   |
+| Equilibrar equipos, change the formation  |   —    |  ✅   |
+| Arrange a line-up once it has been played |   —    |  ✅   |
+| Import results and edit any score         |   —    |  ✅   |
+| Change league settings                    |   —    |  ✅   |
+| Manage members and roles                  |   —    |  ✅   |
 
 Every one of those restrictions is enforced in the database, not by a hidden
 button, and each is covered by a pgTAP test. A league can never be left without
@@ -392,30 +479,72 @@ or `leagues` could see the rows the flow needs.
 
 ## Deployment
 
-No project exists yet. The target is Cloudflare Pages for the frontend
-(`npm run build` → `dist`) and Supabase for the database, auth and storage. The
-real league's data is transcribed and ready to load; see
-[Loading the real league](#loading-the-real-league) below.
+Supabase hosts the database, auth and storage; Cloudflare Pages will host the
+frontend (`npm run build` → `dist`). The database half is done.
 
-The production checklist:
-
-1. Create a Supabase project in a European region and save the database
-   password. It is a full-access credential — never a `VITE_` variable.
-2. `npx supabase link --project-ref <ref>` then `npx supabase db push`. Never
-   `db reset --linked` — it destroys the remote schema.
-3. Set the Site URL and redirect URLs to the Pages domain.
-4. Point Cloudflare Pages at this repository: build `npm run build`, output
-   `dist`.
-5. Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` and `VITE_APP_NAME`
-   as Pages environment variables, and the same values locally in
-   `.env.cloud.local` so `make dev` can reach the project.
-6. Turn on email confirmation in the Supabase auth settings. It is off locally
-   and unverified addresses should not be able to claim a player.
-7. Register `dcastellotejera@gmail.com` and confirm it is the administrator.
-8. Load the roster, fixtures and results: `make prod-load`.
-9. Share the URL. Sign-up can stay open — an account that has not claimed a
+1. ✅ Supabase project in `eu-north-1`, database password saved. It is a
+   full-access credential — never a `VITE_` variable.
+2. ✅ `npx supabase db push`. Never `db reset --linked` — it destroys the remote
+   schema.
+3. ✅ Owner account registered; `app.owner_email()` made it the administrator.
+4. ✅ Roster, fixtures and results loaded with `make prod-load`.
+5. ⬜ Push any migration production does not have yet, **before** the frontend
+   that needs it: `npx supabase db push --db-url "$PROD_DB_URL"`, and check with
+   `npx supabase migration list`. A deploy whose schema arrives second is a
+   deploy that is briefly broken for everyone.
+6. ⬜ Point Cloudflare Pages at this repository — see below.
+7. ⬜ Set the Site URL and redirect URLs to the Pages domain. Confirmation links
+   are built from the Site URL, so this has to happen before anyone registers.
+8. ⬜ Turn on **Confirm email** in the Supabase auth settings, and replace the
+   built-in email sender with real SMTP — it allows only a couple of messages an
+   hour, which will not carry twenty people signing up the same evening.
+9. ⬜ Share the URL. Sign-up can stay open — an account that has not claimed a
    player sees nothing — but disabling it once everyone is in removes the last
    way a stranger could add themselves to the roster.
+
+Steps 7 and 8, and everything else about running the database, are covered in
+[`supabase/README.md`](supabase/README.md).
+
+### Cloudflare Pages
+
+Chosen over GitHub Pages for one concrete reason: routing happens in the
+browser, so `/rankings` is not a file on disk. Cloudflare honours
+[`public/_redirects`](public/_redirects) and serves the app for any unknown
+path with a 200. GitHub Pages has no equivalent — it would need a `404.html`
+copy of `index.html`, plus a `base` and a router `basename` for the
+`/ultimate-pachanga` subpath. Two workarounds to reach where this repo already
+is. Cloudflare also gives a preview URL per pull request, and neither charges
+anything at this size.
+
+**Workers & Pages → Create → Pages → Connect to Git**, authorise the repository,
+then:
+
+| Setting           | Value           |
+| ----------------- | --------------- |
+| Production branch | `main`          |
+| Framework preset  | Vite            |
+| Build command     | `npm run build` |
+| Build output      | `dist`          |
+| Root directory    | _(blank)_       |
+
+Add three variables, **to Production and Preview both** — a preview that builds
+without them fails at runtime with an unhelpful blank page:
+
+```text
+VITE_SUPABASE_URL              https://sbplcaoenljkbhlhuokg.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY  sb_publishable_...
+VITE_APP_NAME                  Roco Summer League
+```
+
+Only the publishable key belongs here, as in `.env.cloud.local`. Every `VITE_`
+variable is compiled into the JavaScript and served to every visitor.
+
+Node comes from [`.nvmrc`](.nvmrc). If a build picks the wrong version anyway,
+add `NODE_VERSION=22` alongside the variables above.
+
+Every push to `main` then deploys, and every pull request gets its own URL.
+Both point at the **same production database** — Pages previews are not a
+separate environment, and there is only one Supabase project.
 
 ### Loading the real league
 
@@ -424,7 +553,7 @@ and all 59 individual scores, transcribed from the spreadsheet. Three scripts,
 run in order, all re-runnable:
 
 ```bash
-export PROD_DB_URL='postgresql://postgres.<ref>:<password>@...pooler.supabase.com:6543/postgres'
+export PROD_DB_URL='postgresql://postgres.<ref>:<password>@...pooler.supabase.com:5432/postgres'
 make prod-load
 ```
 

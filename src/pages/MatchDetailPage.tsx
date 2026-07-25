@@ -1,11 +1,25 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Download, Pencil, Upload, Users } from 'lucide-react'
+import {
+  ArrowLeft,
+  Check,
+  Download,
+  Pencil,
+  Upload,
+  UserPlus,
+  Users,
+} from 'lucide-react'
 import { toast } from 'sonner'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import {
   Table,
   TableBody,
@@ -18,29 +32,38 @@ import { AdminOnly } from '@/components/AdminOnly'
 import { AttributeBadge } from '@/components/AttributeBadge'
 import { EmptyState } from '@/components/EmptyState'
 import { MatchHero } from '@/components/MatchHero'
-import { MatchForm } from '@/features/matches/MatchForm'
+import { MatchForm, type MatchSubmission } from '@/features/matches/MatchForm'
 import {
   SquadSelector,
   type SquadDraft,
 } from '@/features/matches/SquadSelector'
 import { PitchLineups, type LineupEntry } from '@/features/matches/PitchLineups'
+import { BalanceTeamsButton } from '@/features/matches/BalanceTeamsButton'
 import { CsvUploadDialog } from '@/features/results/CsvUploadDialog'
+import {
+  MatchScoreDialog,
+  type ScoreTarget,
+} from '@/features/results/MatchScoreDialog'
 import {
   fetchMatch,
   fetchMatchScores,
   fetchSquad,
   importMatchScores,
+  joinMatch,
   matchKeys,
   saveFormation,
   saveLineup,
+  saveMatchScore,
   saveSquad,
   updateMatch,
+  uploadMatchPhoto,
   type ImportRow,
   type LineupChange,
-  type MatchInput,
+  type MatchScoreEntry,
 } from '@/features/matches/api'
 import { DEFAULT_FORMATION, type Formation } from '@/lib/formations'
 import { fetchPlayerCards, playerKeys } from '@/features/players/api'
+import { useMyPlayerId } from '@/features/players/useMyPlayer'
 import {
   useIsAdmin,
   useLeagueAttributes,
@@ -48,7 +71,14 @@ import {
   useMembership,
 } from '@/features/league/useLeague'
 import { buildScoreTemplate, downloadCsv, toTemplateFilename } from '@/lib/csv'
-import { formatPosition, formatScore, formatVictories } from '@/lib/formatting'
+import {
+  formatMarketValue,
+  formatPosition,
+  formatScore,
+  formatVictories,
+} from '@/lib/formatting'
+import { isUpcomingMatch } from '@/lib/matchLifecycle'
+import { balanceTeams } from '@/lib/teamBalance'
 import type { MatchRow, TeamSide } from '@/types/domain'
 
 function toErrorMessage(error: unknown, fallback: string): string {
@@ -67,11 +97,38 @@ function toTeamName(side: TeamSide, match: MatchRow | undefined): string {
   return 'Sin equipo'
 }
 
+interface ResultRow {
+  playerId: string
+  playerCode: string
+  displayName: string
+  teamName: string
+  /** Absent while this player has no result for the match yet. */
+  score: MatchScoreEntry | undefined
+}
+
+function toScoreTarget(row: ResultRow): ScoreTarget {
+  return {
+    playerCode: row.playerCode,
+    displayName: row.displayName,
+    existing: row.score
+      ? {
+          metricScores: row.score.metricScores,
+          goals: row.score.goals,
+          victory: row.score.victory,
+          attributeCodes: row.score.attributes.map(
+            (attribute) => attribute.code,
+          ),
+        }
+      : undefined,
+  }
+}
+
 export function MatchDetailPage() {
   const { matchId = '' } = useParams()
   const queryClient = useQueryClient()
   const isAdmin = useIsAdmin()
   const { data: membership } = useMembership()
+  const { data: myPlayerId } = useMyPlayerId()
   const { data: metrics = [] } = useLeagueMetrics()
   const { data: attributes = [] } = useLeagueAttributes()
 
@@ -79,6 +136,7 @@ export function MatchDetailPage() {
   const [isSelectingSquad, setIsSelectingSquad] = useState(false)
   const [squadDraft, setSquadDraft] = useState<SquadDraft>(new Map())
   const [isUploadOpen, setIsUploadOpen] = useState(false)
+  const [scoreTarget, setScoreTarget] = useState<ScoreTarget | null>(null)
 
   const { data: match, isPending: isMatchPending } = useQuery({
     queryKey: matchKeys.detail(matchId),
@@ -157,6 +215,63 @@ export function MatchDetailPage() {
       .filter((entry): entry is LineupEntry => entry !== null)
   }, [squad, players])
 
+  /**
+   * Who may do what, all of it hanging off one question: has it been played?
+   *
+   * Before kickoff the convocatoria is everybody's — anyone signs themselves up
+   * and anyone sorts the teams out on the pitch. Afterwards it is the record of
+   * what happened: nobody adds or removes a player, and only an administrator
+   * still moves people, to correct where they actually played. RLS enforces
+   * every one of these; this only decides what is worth rendering.
+   */
+  const isUpcoming = isUpcomingMatch(match?.status)
+  const canArrangeLineup = isAdmin || isUpcoming
+  const canManageSquad = isAdmin && isUpcoming
+  const isAlreadyCalledUp = squad.some(
+    (member) => member.playerId === myPlayerId,
+  )
+  const canJoin = isUpcoming && Boolean(myPlayerId) && !isAlreadyCalledUp
+
+  /**
+   * A row of the results table.
+   *
+   * Administrators get one per convocated player, so somebody the CSV missed can
+   * be scored from here; everyone else gets one per result, because an empty row
+   * is only useful to whoever can fill it in.
+   */
+  const resultRows = useMemo<ResultRow[]>(() => {
+    const scoreByPlayerId = new Map(
+      scores.map((score) => [score.playerId, score]),
+    )
+
+    const rows: ResultRow[] = isAdmin
+      ? squad.map((member) => ({
+          playerId: member.playerId,
+          playerCode: member.playerCode,
+          displayName: member.displayName,
+          teamName: toTeamName(member.teamSide, match),
+          score: scoreByPlayerId.get(member.playerId),
+        }))
+      : scores.map((score) => ({
+          playerId: score.playerId,
+          playerCode: score.playerCode,
+          displayName: score.displayName,
+          teamName: teamNameByPlayerId.get(score.playerId) ?? '—',
+          score,
+        }))
+
+    // Scored players first and best first, the way the table already read; the
+    // players still waiting for a score queue up alphabetically underneath.
+    return rows.sort((left, right) => {
+      if (left.score && right.score) {
+        return right.score.finalScore - left.score.finalScore
+      }
+      if (left.score) return -1
+      if (right.score) return 1
+      return left.displayName.localeCompare(right.displayName, 'es')
+    })
+  }, [isAdmin, squad, scores, match, teamNameByPlayerId])
+
   const squadByCode = useMemo(
     () =>
       new Map(
@@ -177,7 +292,12 @@ export function MatchDetailPage() {
   }
 
   const editMatch = useMutation({
-    mutationFn: (input: MatchInput) => updateMatch(matchId, input),
+    mutationFn: async ({ match: input, photo }: MatchSubmission) => {
+      await updateMatch(matchId, input)
+      // Second statement rather than second field: the object is stored under
+      // the match's id, so it cannot be written by the same update.
+      if (photo) await uploadMatchPhoto(membership!.leagueId, matchId, photo)
+    },
     onSuccess: async () => {
       await invalidateMatch()
       setIsEditing(false)
@@ -192,10 +312,9 @@ export function MatchDetailPage() {
     mutationFn: (draft: SquadDraft) =>
       saveSquad(
         matchId,
-        [...draft.entries()].map(([playerId, entry]) => ({
+        [...draft.entries()].map(([playerId, teamSide]) => ({
           playerId,
-          teamSide: entry.teamSide,
-          attendanceStatus: entry.attendanceStatus,
+          teamSide,
         })),
       ),
     onSuccess: async () => {
@@ -219,6 +338,69 @@ export function MatchDetailPage() {
     },
     onError: (error) => {
       toast.error(toErrorMessage(error, 'No se pudo guardar la alineación'))
+    },
+  })
+
+  /**
+   * Splits the convocatoria into two sides of equal market value.
+   *
+   * The arithmetic is `balanceTeams` (src/lib/teamBalance.ts) and it is all that
+   * happens here: the result is written through the same `saveLineup` path a
+   * drag would have used, and only for the players it actually moves.
+   */
+  const balance = useMutation({
+    mutationFn: async () => {
+      const balanced = balanceTeams(
+        lineupEntries.map((entry) => ({
+          playerId: entry.playerId,
+          marketValueGbp: entry.player.marketValueGbp,
+          isGoalkeeper: entry.player.preferredPosition === 'GK',
+        })),
+      )
+
+      const current = new Map(
+        lineupEntries.map((entry) => [entry.playerId, entry]),
+      )
+      const changes = balanced.assignments.filter((assignment) => {
+        const entry = current.get(assignment.playerId)
+        return (
+          entry?.teamSide !== assignment.teamSide ||
+          entry?.pitchSlot !== assignment.pitchSlot
+        )
+      })
+
+      await saveLineup(matchId, changes)
+      return balanced
+    },
+    onSuccess: async (balanced) => {
+      await queryClient.invalidateQueries({
+        queryKey: matchKeys.squad(matchId),
+      })
+      toast.success(
+        balanced.difference === 0
+          ? 'Equipos equilibrados: idéntico valor de mercado'
+          : `Equipos equilibrados: ${formatMarketValue(balanced.difference)} de diferencia`,
+      )
+    },
+    onError: (error) => {
+      toast.error(
+        toErrorMessage(error, 'No se pudieron equilibrar los equipos'),
+      )
+    },
+  })
+
+  const join = useMutation({
+    mutationFn: () => joinMatch(matchId, myPlayerId!),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: matchKeys.squad(matchId),
+      })
+      toast.success('Estás en la convocatoria. Toca una posición libre.')
+    },
+    onError: (error) => {
+      toast.error(
+        toErrorMessage(error, 'No se pudo añadirte a la convocatoria'),
+      )
     },
   })
 
@@ -256,17 +438,22 @@ export function MatchDetailPage() {
     },
   })
 
+  const saveScore = useMutation({
+    mutationFn: (row: ImportRow) => saveMatchScore(matchId, row),
+    onSuccess: async () => {
+      await invalidateMatch()
+      setScoreTarget(null)
+      toast.success('Puntuación guardada')
+    },
+    onError: (error) => {
+      // The database's message names what it objected to, so it is shown as is.
+      toast.error(toErrorMessage(error, 'No se pudo guardar la puntuación'))
+    },
+  })
+
   function openSquadSelector() {
     setSquadDraft(
-      new Map(
-        squad.map((member) => [
-          member.playerId,
-          {
-            teamSide: member.teamSide,
-            attendanceStatus: member.attendanceStatus,
-          },
-        ]),
-      ),
+      new Map(squad.map((member) => [member.playerId, member.teamSide])),
     )
     setIsSelectingSquad(true)
   }
@@ -333,8 +520,35 @@ export function MatchDetailPage() {
 
       <MatchHero match={match} />
 
-      <AdminOnly>
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
+        {canJoin ? (
+          <Button onClick={() => join.mutate()} disabled={join.isPending}>
+            <UserPlus className="size-4" aria-hidden="true" />
+            Apuntarme
+          </Button>
+        ) : null}
+
+        {/* A status rather than a control: there is no self-removal, and saying
+            so where the sign-up button was avoids the hunt for one. */}
+        {isUpcoming && isAlreadyCalledUp ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge
+                variant="secondary"
+                className="h-9 gap-1.5 px-3"
+                tabIndex={0}
+              >
+                <Check className="size-4" aria-hidden="true" />
+                Estás convocado
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              Solo un administrador puede quitar a alguien de la convocatoria.
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+
+        <AdminOnly>
           <Button
             variant="outline"
             onClick={() => setIsEditing((open) => !open)}
@@ -342,10 +556,14 @@ export function MatchDetailPage() {
             <Pencil className="size-4" aria-hidden="true" />
             {isEditing ? 'Cerrar edición' : 'Editar partido'}
           </Button>
-          <Button variant="outline" onClick={openSquadSelector}>
-            <Users className="size-4" aria-hidden="true" />
-            Convocatoria
-          </Button>
+          {/* Once a match has been played its squad is closed to everybody, so
+              there is nothing behind this button but a rejected write. */}
+          {canManageSquad ? (
+            <Button variant="outline" onClick={openSquadSelector}>
+              <Users className="size-4" aria-hidden="true" />
+              Convocatoria
+            </Button>
+          ) : null}
           <Button variant="outline" onClick={handleDownloadTemplate}>
             <Download className="size-4" aria-hidden="true" />
             Descargar CSV
@@ -359,8 +577,8 @@ export function MatchDetailPage() {
               ? 'Corregir resultados'
               : 'Subir resultados'}
           </Button>
-        </div>
-      </AdminOnly>
+        </AdminOnly>
+      </div>
 
       {isEditing ? (
         <Card className="max-w-2xl">
@@ -374,7 +592,7 @@ export function MatchDetailPage() {
               match={match}
               submitLabel="Guardar cambios"
               onCancel={() => setIsEditing(false)}
-              onSubmit={(input) => editMatch.mutateAsync(input)}
+              onSubmit={(submission) => editMatch.mutateAsync(submission)}
             />
           </CardContent>
         </Card>
@@ -422,10 +640,18 @@ export function MatchDetailPage() {
       ) : null}
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
           <CardTitle>
             <h2>Alineaciones</h2>
           </CardTitle>
+          {isUpcoming ? (
+            <BalanceTeamsButton
+              isAdmin={isAdmin}
+              hasEnoughPlayers={squad.length >= 2}
+              isPending={balance.isPending}
+              onBalance={() => balance.mutate()}
+            />
+          ) : null}
         </CardHeader>
         <CardContent>
           {isSquadPending ? (
@@ -437,7 +663,11 @@ export function MatchDetailPage() {
             <EmptyState
               icon={Users}
               title="Nadie convocado todavía"
-              description="Selecciona la convocatoria y los jugadores aparecerán sobre el campo."
+              description={
+                isUpcoming
+                  ? 'Apúntate o añade jugadores y aparecerán sobre el campo.'
+                  : 'Este partido se jugó sin convocatoria registrada.'
+              }
               className="border-0 py-6"
             />
           ) : (
@@ -448,7 +678,8 @@ export function MatchDetailPage() {
               awayTeamName={match.away_team_name}
               homeFormation={match.home_formation ?? DEFAULT_FORMATION}
               awayFormation={match.away_formation ?? DEFAULT_FORMATION}
-              interactive={isAdmin}
+              interactive={canArrangeLineup}
+              canChangeFormation={isAdmin}
               onFormationChange={(side, formation) =>
                 persistFormation.mutate({ side, formation })
               }
@@ -471,7 +702,11 @@ export function MatchDetailPage() {
             <EmptyState
               icon={Users}
               title="Nadie convocado todavía"
-              description="Un administrador debe seleccionar la convocatoria antes de poder puntuar el partido."
+              description={
+                isUpcoming
+                  ? 'Cualquiera puede apuntarse; quitar a alguien es cosa del administrador.'
+                  : 'Nadie quedó registrado en este partido.'
+              }
               className="border-0 py-6"
             />
           ) : (
@@ -515,12 +750,18 @@ export function MatchDetailPage() {
         </CardContent>
       </Card>
 
-      {scores.length > 0 ? (
+      {resultRows.length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle>
               <h2>Resultados</h2>
             </CardTitle>
+            {isAdmin ? (
+              <p className="text-sm text-muted-foreground">
+                Edita cualquier puntuación, gol o atributo aquí mismo; se guarda
+                en la base de datos al instante.
+              </p>
+            ) : null}
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -539,42 +780,49 @@ export function MatchDetailPage() {
                     <TableHead className="text-right">Base</TableHead>
                     <TableHead>Atributos</TableHead>
                     <TableHead className="text-right">Final</TableHead>
+                    {isAdmin ? (
+                      <TableHead className="text-right">
+                        <span className="sr-only">Acciones</span>
+                      </TableHead>
+                    ) : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {scores.map((score) => (
-                    <TableRow key={score.playerId}>
+                  {resultRows.map((row) => (
+                    <TableRow key={row.playerId}>
                       <TableCell className="font-medium">
                         <Link
-                          to={`/players/${score.playerId}`}
+                          to={`/players/${row.playerId}`}
                           className="hover:underline"
                         >
-                          {score.displayName}
+                          {row.displayName}
                         </Link>
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {teamNameByPlayerId.get(score.playerId) ?? '—'}
+                        {row.teamName}
                       </TableCell>
                       {metrics.map((metric) => (
                         <TableCell
                           key={metric.code}
                           className="numeric text-right"
                         >
-                          {formatScore(score.metricScores[metric.code] ?? null)}
+                          {formatScore(
+                            row.score?.metricScores[metric.code] ?? null,
+                          )}
                         </TableCell>
                       ))}
                       <TableCell className="numeric text-right">
-                        {score.goals}
+                        {row.score ? row.score.goals : '—'}
                       </TableCell>
                       <TableCell className="numeric text-right">
-                        {formatVictories(score.victory)}
+                        {row.score ? formatVictories(row.score.victory) : '—'}
                       </TableCell>
                       <TableCell className="numeric text-right">
-                        {formatScore(score.baseScore)}
+                        {formatScore(row.score?.baseScore ?? null)}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {score.attributes.map((attribute) => (
+                          {(row.score?.attributes ?? []).map((attribute) => (
                             <AttributeBadge
                               key={attribute.code}
                               label={attribute.label}
@@ -584,8 +832,21 @@ export function MatchDetailPage() {
                         </div>
                       </TableCell>
                       <TableCell className="numeric text-right font-bold">
-                        {formatScore(score.finalScore)}
+                        {formatScore(row.score?.finalScore ?? null)}
                       </TableCell>
+                      {isAdmin ? (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            data-testid={`edit-score-${row.playerCode}`}
+                            onClick={() => setScoreTarget(toScoreTarget(row))}
+                          >
+                            <Pencil className="size-4" aria-hidden="true" />
+                            {row.score ? 'Editar' : 'Puntuar'}
+                          </Button>
+                        </TableCell>
+                      ) : null}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -594,6 +855,17 @@ export function MatchDetailPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      <MatchScoreDialog
+        open={scoreTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setScoreTarget(null)
+        }}
+        target={scoreTarget}
+        metrics={metrics}
+        attributes={attributes}
+        onSubmit={(row) => saveScore.mutateAsync(row).then(() => undefined)}
+      />
 
       <CsvUploadDialog
         open={isUploadOpen}

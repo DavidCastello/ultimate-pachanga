@@ -74,17 +74,17 @@ on conflict (id) do update
 -- Squads
 --
 -- `home` is Blanco and `away` is Negro throughout, matching the «Equipo»
--- column: B and N. Everyone listed here turned out, so attendance is `played`.
+-- column: B and N. Everyone listed here turned out; the row itself is the
+-- record of that, so there is nothing else to state (see migration 012).
 -- ---------------------------------------------------------------------------
 
 insert into public.match_players (
-  match_id, player_id, team_side, attendance_status
+  match_id, player_id, team_side
 )
 select
   squad.match_id::uuid,
   p.id,
-  squad.team_side::public.team_side,
-  'played'::public.attendance_status
+  squad.team_side::public.team_side
 from (
   values
     -- Jornada 1 — Blanco 8, Negro 6. Negro won.
@@ -158,8 +158,7 @@ join public.players p
   on p.league_id = app.initial_league_id()
  and p.player_code = squad.player_code
 on conflict (match_id, player_id) do update
-  set team_side = excluded.team_side,
-      attendance_status = excluded.attendance_status;
+  set team_side = excluded.team_side;
 
 -- ---------------------------------------------------------------------------
 -- Place each side in a 2-3-1

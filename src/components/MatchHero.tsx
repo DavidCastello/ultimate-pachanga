@@ -15,7 +15,7 @@ export function MatchHero({ match }: { match: MatchRow }) {
   return (
     <header className="grid overflow-hidden rounded-xl bg-card text-card-foreground ring-1 ring-foreground/10 sm:grid-cols-[42%_1fr]">
       <VenuePhoto
-        location={match.location}
+        match={match}
         className="h-32 sm:h-auto sm:min-h-40"
         overlayClassName="bg-gradient-to-b from-transparent to-card sm:bg-gradient-to-r sm:from-transparent sm:via-card/40 sm:to-card"
       />

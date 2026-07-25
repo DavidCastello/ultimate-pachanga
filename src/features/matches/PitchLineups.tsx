@@ -60,8 +60,21 @@ interface PitchLineupsProps {
   awayTeamName: string
   homeFormation: Formation
   awayFormation: Formation
-  /** Administrators can rearrange; everyone else reads. */
+  /**
+   * Whether players can be moved around.
+   *
+   * True for any member while the match is still to be played, and for
+   * administrators always — see isUpcomingMatch.
+   */
   interactive: boolean
+  /**
+   * Whether the shape itself can be changed.
+   *
+   * Narrower than `interactive` on purpose: the formation lives on `matches`,
+   * which only an administrator may write, so offering the control to a member
+   * arranging an upcoming line-up would just produce a failed request.
+   */
+  canChangeFormation: boolean
   onFormationChange: (side: 'home' | 'away', formation: Formation) => void
   /** Called with only the players whose side or slot actually changed. */
   onLineupChange: (changes: LineupChange[]) => void
@@ -75,6 +88,7 @@ export function PitchLineups({
   homeFormation,
   awayFormation,
   interactive,
+  canChangeFormation,
   onFormationChange,
   onLineupChange,
 }: PitchLineupsProps) {
@@ -256,7 +270,7 @@ export function PitchLineups({
                   {teamName}
                 </h3>
 
-                {interactive ? (
+                {canChangeFormation ? (
                   <Select
                     value={formation}
                     onValueChange={(value) =>

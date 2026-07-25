@@ -1,4 +1,5 @@
 import { supabase, PLAYER_AVATARS_BUCKET } from '@/lib/supabase'
+import { toImageExtension } from '@/lib/images'
 import {
   toPlayerCardData,
   type PlayerCardData,
@@ -231,27 +232,6 @@ export async function updateOwnPlayerProfile(
   if (error) throw error
 }
 
-const MAX_AVATAR_BYTES = 3 * 1024 * 1024
-
-const AVATAR_EXTENSIONS: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-}
-
-/** Validates a chosen photograph and returns the extension its path will use. */
-function toAvatarExtension(file: File): string {
-  const extension = AVATAR_EXTENSIONS[file.type]
-
-  if (!extension) throw new Error('La imagen debe ser JPEG, PNG o WebP')
-
-  if (file.size > MAX_AVATAR_BYTES) {
-    throw new Error('La imagen no puede superar los 3 MB')
-  }
-
-  return extension
-}
-
 /**
  * Uploads a photograph to `{leagueId}/{playerId}.{ext}`.
  *
@@ -282,7 +262,7 @@ export async function uploadPlayerAvatar(
   playerId: string,
   file: File,
 ): Promise<string> {
-  const extension = toAvatarExtension(file)
+  const extension = toImageExtension(file)
   const path = await uploadAvatarObject(leagueId, playerId, file, extension)
 
   const { error } = await supabase
@@ -307,7 +287,7 @@ export async function uploadOwnPlayerAvatar(
   playerId: string,
   file: File,
 ): Promise<string> {
-  const extension = toAvatarExtension(file)
+  const extension = toImageExtension(file)
   await uploadAvatarObject(leagueId, playerId, file, extension)
 
   const { data, error } = await supabase.rpc('set_own_player_avatar', {

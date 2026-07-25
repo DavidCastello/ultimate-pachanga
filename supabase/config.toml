@@ -248,7 +248,15 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+#
+# On, so that local development rehearses production rather than diverging from
+# it: an unconfirmed address must not be able to claim a player off the roster.
+# Nothing leaves your machine — the local stack captures every message in
+# Mailpit at http://127.0.0.1:54324, where you click the link yourself.
+#
+# The owner seeded by seeds/00_dev_owner.sql arrives already confirmed, so
+# `make db-reset` still leaves you able to sign in immediately.
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
@@ -267,6 +275,13 @@ otp_expiry = 3600
 # pass = "env(SENDGRID_API_KEY)"
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
+
+# The sign-up confirmation email. Read by the local stack only; the deployed
+# project keeps its own copy under Authentication > Emails, pasted by hand.
+# See supabase/README.md, "Customising the email".
+[auth.email.template.confirmation]
+subject = "Confirma tu correo — Liga de verano roco"
+content_path = "./supabase/templates/confirmation.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

@@ -53,9 +53,9 @@ const MatchNewPage = lazy(() =>
     default: module.MatchNewPage,
   })),
 )
-const RankingsPage = lazy(() =>
-  import('@/pages/RankingsPage').then((module) => ({
-    default: module.RankingsPage,
+const StatsPage = lazy(() =>
+  import('@/pages/StatsPage').then((module) => ({
+    default: module.StatsPage,
   })),
 )
 const AdminPlayersPage = lazy(() =>
@@ -114,7 +114,13 @@ const router = createBrowserRouter([
               { path: '/players/:playerId', element: <PlayerDetailPage /> },
               { path: '/matches', element: <MatchesPage /> },
               { path: '/matches/:matchId', element: <MatchDetailPage /> },
-              { path: '/rankings', element: <RankingsPage /> },
+              { path: '/stats', element: <StatsPage /> },
+              // The section was called "Clasificaciones" and lived at
+              // /rankings; anyone who bookmarked it keeps working.
+              {
+                path: '/rankings',
+                element: <Navigate to="/stats" replace />,
+              },
               {
                 element: <AdminRoute />,
                 children: [

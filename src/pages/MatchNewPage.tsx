@@ -4,8 +4,12 @@ import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { MatchForm } from '@/features/matches/MatchForm'
-import { createMatch, matchKeys, type MatchInput } from '@/features/matches/api'
+import { MatchForm, type MatchSubmission } from '@/features/matches/MatchForm'
+import {
+  createMatch,
+  matchKeys,
+  uploadMatchPhoto,
+} from '@/features/matches/api'
 import { useMembership } from '@/features/league/useLeague'
 
 export function MatchNewPage() {
@@ -13,8 +17,29 @@ export function MatchNewPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
+  /**
+   * Creates the fixture, then gives it its photograph.
+   *
+   * Two steps because the object is stored under the match's id, which does not
+   * exist until the first one has run — and a photograph that fails to upload
+   * must not look like a match that failed to be created, or the next attempt
+   * makes a second one. The fixture stands and keeps the picture bundled for
+   * its location; the photograph can be added again from the match itself.
+   */
   const create = useMutation({
-    mutationFn: (input: MatchInput) => createMatch(membership!.leagueId, input),
+    mutationFn: async ({ match, photo }: MatchSubmission) => {
+      const matchId = await createMatch(membership!.leagueId, match)
+
+      if (photo) {
+        try {
+          await uploadMatchPhoto(membership!.leagueId, matchId, photo)
+        } catch {
+          toast.warning('Partido creado, pero la foto no se pudo subir')
+        }
+      }
+
+      return matchId
+    },
     onSuccess: async (matchId) => {
       await queryClient.invalidateQueries({ queryKey: matchKeys.all })
       toast.success('Partido creado. Ahora convoca a los jugadores.')
@@ -48,8 +73,8 @@ export function MatchNewPage() {
           <MatchForm
             submitLabel="Crear partido"
             onCancel={() => navigate('/matches')}
-            onSubmit={async (input) => {
-              await create.mutateAsync(input)
+            onSubmit={async (submission) => {
+              await create.mutateAsync(submission)
             }}
           />
         </CardContent>

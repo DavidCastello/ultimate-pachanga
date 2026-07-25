@@ -13,7 +13,7 @@ export function MatchCard({ match }: { match: MatchRow }) {
       className="rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
     >
       <Card className="grid min-h-32 grid-cols-[38%_1fr] gap-0 py-0 transition-shadow hover:ring-primary/40 sm:grid-cols-[42%_1fr]">
-        <VenuePhoto location={match.location} />
+        <VenuePhoto match={match} />
 
         <div className="flex min-w-0 flex-col gap-1.5 py-3.5 pr-4 pl-3">
           <div className="flex items-start justify-between gap-2">

@@ -174,7 +174,6 @@ export type Database = {
       }
       match_players: {
         Row: {
-          attendance_status: Database["public"]["Enums"]["attendance_status"]
           created_at: string
           id: string
           match_id: string
@@ -183,7 +182,6 @@ export type Database = {
           team_side: Database["public"]["Enums"]["team_side"]
         }
         Insert: {
-          attendance_status?: Database["public"]["Enums"]["attendance_status"]
           created_at?: string
           id?: string
           match_id: string
@@ -192,7 +190,6 @@ export type Database = {
           team_side?: Database["public"]["Enums"]["team_side"]
         }
         Update: {
-          attendance_status?: Database["public"]["Enums"]["attendance_status"]
           created_at?: string
           id?: string
           match_id?: string
@@ -248,6 +245,7 @@ export type Database = {
           id: string
           league_id: string
           location: string
+          photo_path: string | null
           played_at: string
           results_imported_at: string | null
           status: Database["public"]["Enums"]["match_status"]
@@ -263,6 +261,7 @@ export type Database = {
           id?: string
           league_id: string
           location: string
+          photo_path?: string | null
           played_at: string
           results_imported_at?: string | null
           status?: Database["public"]["Enums"]["match_status"]
@@ -278,6 +277,7 @@ export type Database = {
           id?: string
           league_id?: string
           location?: string
+          photo_path?: string | null
           played_at?: string
           results_imported_at?: string | null
           status?: Database["public"]["Enums"]["match_status"]
@@ -605,6 +605,7 @@ export type Database = {
           preferred_position: Database["public"]["Enums"]["player_position"]
         }[]
       }
+      match_is_upcoming: { Args: { p_match_id: string }; Returns: boolean }
       match_league_id: { Args: { p_match_id: string }; Returns: string }
       owns_player: { Args: { p_player_id: string }; Returns: boolean }
       score_league_id: { Args: { p_score_id: string }; Returns: string }
@@ -634,7 +635,6 @@ export type Database = {
       victory_points: { Args: never; Returns: number }
     }
     Enums: {
-      attendance_status: "called_up" | "confirmed" | "played" | "absent"
       league_category: "football_7"
       league_status: "active" | "inactive"
       match_status: "draft" | "scheduled" | "played" | "scored" | "cancelled"
@@ -783,7 +783,6 @@ export const Constants = {
   },
   public: {
     Enums: {
-      attendance_status: ["called_up", "confirmed", "played", "absent"],
       league_category: ["football_7"],
       league_status: ["active", "inactive"],
       match_status: ["draft", "scheduled", "played", "scored", "cancelled"],

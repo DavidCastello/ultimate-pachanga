@@ -1,7 +1,8 @@
-import { Controller, useForm } from 'react-hook-form'
+import { useEffect, useRef, useState } from 'react'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2 } from 'lucide-react'
+import { ImagePlus, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -13,6 +14,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatMatchStatus } from '@/lib/formatting'
+import { toImageExtension } from '@/lib/images'
+import { getMatchPhotoUrl } from '@/lib/supabase'
+import { getVenueImage } from '@/lib/venues'
 import type { MatchInput } from '@/features/matches/api'
 import type { MatchRow, MatchStatus } from '@/types/domain'
 
@@ -47,6 +51,12 @@ function toLocalInputValue(isoDate: string): string {
   return local.toISOString().slice(0, 16)
 }
 
+/** A photograph chosen but not yet uploaded, with the URL that previews it. */
+interface ChosenPhoto {
+  file: File
+  previewUrl: string
+}
+
 function defaultKickoff(): string {
   const date = new Date()
   date.setDate(date.getDate() + 7)
@@ -54,9 +64,22 @@ function defaultKickoff(): string {
   return toLocalInputValue(date.toISOString())
 }
 
+/**
+ * What the form hands back.
+ *
+ * The photograph travels beside the match rather than inside it because it
+ * cannot be written in the same statement: the object is stored under the
+ * match's own id, which a new fixture does not have until it has been created.
+ */
+export interface MatchSubmission {
+  match: MatchInput
+  /** A newly chosen photograph, or null to keep whatever the match has. */
+  photo: File | null
+}
+
 interface MatchFormProps {
   match?: MatchRow
-  onSubmit: (input: MatchInput) => Promise<void>
+  onSubmit: (submission: MatchSubmission) => Promise<void>
   onCancel: () => void
   submitLabel: string
 }
@@ -67,6 +90,10 @@ export function MatchForm({
   onCancel,
   submitLabel,
 }: MatchFormProps) {
+  const [photo, setPhoto] = useState<ChosenPhoto | null>(null)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+
   const {
     register,
     control,
@@ -98,15 +125,61 @@ export function MatchForm({
         },
   })
 
+  // Releases the blob URL once its photograph has been replaced or the form
+  // has gone.
+  useEffect(() => {
+    if (!photo) return
+
+    return () => URL.revokeObjectURL(photo.previewUrl)
+  }, [photo])
+
+  // Subscribed through useWatch rather than watch(): the preview follows the
+  // location as it is typed, and only this field re-renders.
+  const location = useWatch({ control, name: 'location' })
+
+  // What the match would look like if it were saved now: the photograph just
+  // chosen, else the one it already has, else the picture bundled for whatever
+  // location is currently typed.
+  const previewUrl =
+    photo?.previewUrl ??
+    getMatchPhotoUrl(match?.photo_path) ??
+    getVenueImage(location)
+
+  function handlePhotoSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    // Reset so picking the same file twice still fires a change event.
+    event.target.value = ''
+
+    if (!file) return
+
+    try {
+      // The same rules the bucket enforces, so a rejection arrives here rather
+      // than as a failed upload after the match has already been saved.
+      toImageExtension(file)
+    } catch (error) {
+      setPhoto(null)
+      setPhotoError(
+        error instanceof Error ? error.message : 'No se pudo usar la imagen',
+      )
+      return
+    }
+
+    setPhotoError(null)
+    setPhoto({ file, previewUrl: URL.createObjectURL(file) })
+  }
+
   async function submit(values: MatchFormValues) {
     await onSubmit({
-      title: values.title,
-      location: values.location,
-      // The input is local time; the column is timestamptz.
-      playedAt: new Date(values.playedAt).toISOString(),
-      homeTeamName: values.homeTeamName,
-      awayTeamName: values.awayTeamName,
-      status: values.status,
+      match: {
+        title: values.title,
+        location: values.location,
+        // The input is local time; the column is timestamptz.
+        playedAt: new Date(values.playedAt).toISOString(),
+        homeTeamName: values.homeTeamName,
+        awayTeamName: values.awayTeamName,
+        status: values.status,
+      },
+      photo: photo?.file ?? null,
     })
   }
 
@@ -134,6 +207,46 @@ export function MatchForm({
         {errors.location ? (
           <FieldError>{errors.location.message}</FieldError>
         ) : null}
+      </Field>
+
+      <Field data-invalid={Boolean(photoError) || undefined}>
+        <FieldLabel htmlFor="match-photo">Foto del partido</FieldLabel>
+        <div className="flex items-center gap-3">
+          <img
+            src={previewUrl}
+            alt=""
+            className="h-16 w-28 shrink-0 rounded-md object-cover ring-1 ring-foreground/10"
+            data-testid="match-form-photo-preview"
+          />
+          <div className="flex flex-col gap-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              onClick={() => photoInputRef.current?.click()}
+              data-testid="match-form-photo-button"
+            >
+              <ImagePlus className="size-4" aria-hidden="true" />
+              {photo ? 'Elegir otra' : 'Cambiar foto'}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              {photo
+                ? photo.file.name
+                : 'Sin foto propia se usa la del lugar. JPEG, PNG o WebP, hasta 3 MB.'}
+            </p>
+          </div>
+        </div>
+        <input
+          id="match-photo"
+          ref={photoInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="sr-only"
+          onChange={handlePhotoSelected}
+          data-testid="match-form-photo-input"
+        />
+        {photoError ? <FieldError>{photoError}</FieldError> : null}
       </Field>
 
       <Field data-invalid={Boolean(errors.playedAt) || undefined}>

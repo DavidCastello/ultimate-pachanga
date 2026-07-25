@@ -1,0 +1,72 @@
+<!--
+  Sign-up confirmation email.
+
+  Wired up in config.toml under [auth.email.template.confirmation], which the
+  local stack reads directly. The deployed project does not read this file —
+  paste it into Authentication > Emails > Confirm signup. Keeping the two in
+  step by hand is the trade for not pushing config.toml to production, where it
+  would overwrite the Site URL with localhost.
+
+  {{ .ConfirmationURL }} is the only required variable. Also available:
+  {{ .Email }}, {{ .SiteURL }}, {{ .Token }} (the six-digit code),
+  {{ .TokenHash }}, {{ .RedirectTo }}.
+
+  Inline styles only. Email clients discard <style> blocks and ignore most of
+  what a browser would honour.
+-->
+<div
+  style="
+    font-family:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 32px 24px;
+    color: #0f172a;
+  "
+>
+  <h1 style="margin: 0 0 8px; font-size: 22px; font-weight: 700">
+    Confirma tu correo
+  </h1>
+
+  <p
+    style="margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: #475569"
+  >
+    Ya casi estás en la <strong>Liga de verano roco</strong>. Confirma tu
+    dirección y elige qué jugador eres.
+  </p>
+
+  <p style="margin: 0 0 24px">
+    <a
+      href="{{ .ConfirmationURL }}"
+      style="
+        display: inline-block;
+        background: #16a34a;
+        color: #ffffff;
+        text-decoration: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+      "
+      >Confirmar mi correo</a
+    >
+  </p>
+
+  <p
+    style="margin: 0 0 24px; font-size: 13px; line-height: 1.6; color: #64748b"
+  >
+    Si el botón no funciona, copia este enlace en el navegador:<br />
+    <a
+      href="{{ .ConfirmationURL }}"
+      style="color: #16a34a; word-break: break-all"
+      >{{ .ConfirmationURL }}</a
+    >
+  </p>
+
+  <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0 0 16px" />
+
+  <p style="margin: 0; font-size: 12px; line-height: 1.6; color: #94a3b8">
+    El enlace caduca en una hora. Si no te has registrado en la liga, ignora
+    este mensaje: no se creará ninguna cuenta.
+  </p>
+</div>

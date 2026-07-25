@@ -1,8 +1,8 @@
-import { supabase } from '@/lib/supabase'
+import { supabase, MATCH_PHOTOS_BUCKET } from '@/lib/supabase'
+import { toImageExtension } from '@/lib/images'
 import type { Formation } from '@/lib/formations'
 import type { Json } from '@/types/database'
 import type {
-  AttendanceStatus,
   MatchRow,
   MatchStatus,
   PlayerPosition,
@@ -47,7 +47,6 @@ export interface SquadMember {
   displayName: string
   preferredPosition: PlayerPosition
   teamSide: TeamSide
-  attendanceStatus: AttendanceStatus
   /** Null when the player is convocated but not placed on the pitch. */
   pitchSlot: number | null
 }
@@ -57,7 +56,6 @@ export async function fetchSquad(matchId: string): Promise<SquadMember[]> {
     .from('match_players')
     .select(
       `team_side,
-       attendance_status,
        pitch_slot,
        players!inner (
          id, player_code, first_name, last_name, nickname, preferred_position
@@ -78,7 +76,6 @@ export async function fetchSquad(matchId: string): Promise<SquadMember[]> {
         `${row.players.first_name} ${row.players.last_name}`,
       preferredPosition: row.players.preferred_position,
       teamSide: row.team_side,
-      attendanceStatus: row.attendance_status,
       pitchSlot: row.pitch_slot,
     }))
     .sort((left, right) =>
@@ -189,6 +186,43 @@ export async function updateMatch(
 }
 
 /**
+ * Uploads a photograph of the place this match is played and points the match
+ * at it.
+ *
+ * The object goes to `{leagueId}/{matchId}.{ext}`, the layout the storage
+ * policies authorize against: the first segment identifies the league, so no
+ * lookup table is needed to decide who may write it. Upsert replaces rather
+ * than accumulating files, which is what correcting a photograph should do.
+ *
+ * Matches without one keep `photo_path` null and fall back to the picture
+ * bundled for their location, so uploading is never required to create a
+ * fixture.
+ */
+export async function uploadMatchPhoto(
+  leagueId: string,
+  matchId: string,
+  file: File,
+): Promise<string> {
+  const extension = toImageExtension(file)
+  const path = `${leagueId}/${matchId}.${extension}`
+
+  const { error: uploadError } = await supabase.storage
+    .from(MATCH_PHOTOS_BUCKET)
+    .upload(path, file, { upsert: true, contentType: file.type })
+
+  if (uploadError) throw uploadError
+
+  const { error } = await supabase
+    .from('matches')
+    .update({ photo_path: path })
+    .eq('id', matchId)
+
+  if (error) throw error
+
+  return path
+}
+
+/**
  * Cancels a match.
  *
  * Matches are never deleted — a cancelled fixture is part of the season's
@@ -206,7 +240,6 @@ export async function cancelMatch(matchId: string): Promise<void> {
 export interface SquadSelection {
   playerId: string
   teamSide: TeamSide
-  attendanceStatus: AttendanceStatus
 }
 
 /**
@@ -249,12 +282,33 @@ export async function saveSquad(
       match_id: matchId,
       player_id: selection.playerId,
       team_side: selection.teamSide,
-      attendance_status: selection.attendanceStatus,
     })),
     { onConflict: 'match_id,player_id' },
   )
 
   if (upsertError) throw upsertError
+}
+
+/**
+ * Signs the caller's own player up for a match.
+ *
+ * A plain insert rather than an RPC: the `match_players_join_self` policy in
+ * migration 011 already expresses the whole rule — your own player, and a match
+ * still to be played — and PostgREST refuses anything else with a 42501. They
+ * arrive on the bench with no side, and place themselves by tapping a free
+ * position.
+ */
+export async function joinMatch(
+  matchId: string,
+  playerId: string,
+): Promise<void> {
+  const { error } = await supabase.from('match_players').insert({
+    match_id: matchId,
+    player_id: playerId,
+    team_side: 'unassigned',
+  })
+
+  if (error) throw error
 }
 
 /**
@@ -341,6 +395,25 @@ export interface ImportSummary {
  * The database re-validates everything and rolls the whole batch back if any
  * row fails, so a rejected import can never leave half a match scored.
  */
+/**
+ * Writes one player's result, from the UI rather than from a spreadsheet.
+ *
+ * Deliberately the same RPC as the CSV import, called with a single row. The
+ * database owns the formulas and every range check, and it upserts by
+ * `(match_id, player_id)` — so this corrects exactly one player and cannot
+ * produce a score the import would have rejected. Writing to
+ * `player_match_scores` directly would mean recomputing base and final scores in
+ * the browser, which is how two sources of truth start.
+ *
+ * Like any import, it marks the match as scored.
+ */
+export async function saveMatchScore(
+  matchId: string,
+  row: ImportRow,
+): Promise<void> {
+  await importMatchScores(matchId, [row])
+}
+
 export async function importMatchScores(
   matchId: string,
   rows: readonly ImportRow[],

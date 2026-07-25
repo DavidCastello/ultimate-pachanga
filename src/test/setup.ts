@@ -42,3 +42,10 @@ if (!Element.prototype.hasPointerCapture) {
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {}
 }
+
+// jsdom has no blob URLs, which is how a form previews a photograph the user
+// has only just chosen and not yet uploaded.
+if (!URL.createObjectURL) {
+  URL.createObjectURL = () => 'blob:preview'
+  URL.revokeObjectURL = () => {}
+}

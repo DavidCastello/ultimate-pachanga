@@ -15,6 +15,7 @@ import {
 import { AttributeBadge } from '@/components/AttributeBadge'
 import { EmptyState } from '@/components/EmptyState'
 import { MarketValue } from '@/components/MarketValue'
+import { MetricRadarChart } from '@/components/MetricRadarChart'
 import { PlayerCard } from '@/components/PlayerCard'
 import {
   fetchPlayerCard,
@@ -174,21 +175,8 @@ export function PlayerDetailPage() {
                 <h2>Medias por métrica</h2>
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {metrics.map((metric) => (
-                <div key={metric.code}>
-                  <p className="text-xs text-muted-foreground">
-                    {metric.label}
-                  </p>
-                  <p className="numeric text-xl font-bold">
-                    {player.metricCardStats[metric.code] ?? '—'}
-                  </p>
-                  <p className="numeric text-xs text-muted-foreground">
-                    {formatScore(player.metricAverages[metric.code] ?? null)} /{' '}
-                    {formatScore(metric.maximum_score)}
-                  </p>
-                </div>
-              ))}
+            <CardContent>
+              <MetricRadarChart player={player} metrics={metrics} />
             </CardContent>
           </Card>
 

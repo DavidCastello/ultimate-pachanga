@@ -14,6 +14,12 @@
 /** Upper bound of the display scale used on cards. */
 const CARD_STAT_MAX = 99
 
+/** Bounds and shape of the card rating. Mirrors `public.to_card_rating`. */
+const CARD_RATING_CENTRE = 70
+const CARD_RATING_POINTS_PER_DEVIATION = 12
+const CARD_RATING_MIN = 45
+const CARD_RATING_MAX = 99
+
 /**
  * What a full victory adds to a final score.
  *
@@ -135,6 +141,66 @@ export function toCardStat(average: number | null | undefined): number | null {
   }
 
   return clamp(roundHalfAwayFromZero(average * 10), 0, CARD_STAT_MAX)
+}
+
+/**
+ * Where a score sits among its peers, on the 45–99 card scale.
+ *
+ * Mirrors `public.to_card_rating`: the latest score placed on a normal
+ * distribution of every player's latest score, centred on 70 with twelve points
+ * per standard deviation. The database computes this for the current standings;
+ * this exists so the evolution chart can compute what the rating *was* after
+ * each past match, which nothing stores.
+ *
+ * With no spread to place anyone within — nobody has played, or everyone scored
+ * identically — every player sits at the centre.
+ */
+export function toCardRating(
+  latestScore: number | null | undefined,
+  leagueMean: number | null | undefined,
+  leagueSpread: number | null | undefined,
+): number {
+  if (
+    latestScore === null ||
+    latestScore === undefined ||
+    leagueMean === null ||
+    leagueMean === undefined ||
+    !leagueSpread
+  ) {
+    return CARD_RATING_CENTRE
+  }
+
+  return clamp(
+    roundHalfAwayFromZero(
+      CARD_RATING_CENTRE +
+        CARD_RATING_POINTS_PER_DEVIATION *
+          ((latestScore - leagueMean) / leagueSpread),
+    ),
+    CARD_RATING_MIN,
+    CARD_RATING_MAX,
+  )
+}
+
+/**
+ * Population standard deviation, as `stddev_pop` computes it.
+ *
+ * Population rather than sample, because a league is the whole population and
+ * not an estimate drawn from one — and it yields 0 for a single player, which
+ * toCardRating already handles.
+ */
+export function calculateSpread(values: readonly number[]): number {
+  if (values.length === 0) return 0
+
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length
+  const variance =
+    values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length
+
+  return Math.sqrt(variance)
+}
+
+export function calculateMean(values: readonly number[]): number | null {
+  if (values.length === 0) return null
+  return values.reduce((sum, value) => sum + value, 0) / values.length
 }
 
 export type CardTier = 'gold' | 'silver' | 'bronze'

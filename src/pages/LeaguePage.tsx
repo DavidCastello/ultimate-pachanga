@@ -16,6 +16,7 @@ import {
   useMembership,
 } from '@/features/league/useLeague'
 import { formatVictories, formatWinRate } from '@/lib/formatting'
+import { isUpcomingMatch } from '@/lib/matchLifecycle'
 import type { MatchRow, PlayerCardData } from '@/types/domain'
 
 const LEADERBOARD_SIZE = 5
@@ -120,7 +121,7 @@ export function LeaguePage() {
   )
 
   const nextMatch: MatchRow | undefined = (matches ?? [])
-    .filter((match) => match.status === 'scheduled' || match.status === 'draft')
+    .filter((match) => isUpcomingMatch(match.status))
     .at(-1)
 
   const scoredMatchCount = (matches ?? []).filter(
@@ -224,7 +225,7 @@ export function LeaguePage() {
         <EmptyState
           icon={CalendarDays}
           title="Ningún partido puntuado todavía"
-          description="Las clasificaciones y los valores de mercado aparecerán tras el primer partido."
+          description="Las estadísticas y los valores de mercado aparecerán tras el primer partido."
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">

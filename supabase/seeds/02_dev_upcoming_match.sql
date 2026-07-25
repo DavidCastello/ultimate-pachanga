@@ -33,13 +33,12 @@ values (
 );
 
 insert into public.match_players (
-  match_id, player_id, team_side, attendance_status
+  match_id, player_id, team_side
 )
 select
   'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
   p.id,
-  squad.team_side::public.team_side,
-  'confirmed'::public.attendance_status
+  squad.team_side::public.team_side
 from (
   values
     ('home', 'JORDI'),

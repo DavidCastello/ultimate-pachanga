@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   calculateAttributePoints,
   calculateBaseScore,
+  calculateMean,
   calculateScoreBreakdown,
+  calculateSpread,
+  toCardRating,
   isGoalCountValid,
   isMetricScoreInRange,
   isVictoryShareValid,
@@ -169,6 +172,42 @@ describe('toCardTier', () => {
 
   it('falls back to bronze for an unrated player', () => {
     expect(toCardTier(null)).toBe('bronze')
+  })
+})
+
+describe('calculateMean and calculateSpread', () => {
+  it('has no mean for an empty population', () => {
+    expect(calculateMean([])).toBeNull()
+    expect(calculateSpread([])).toBe(0)
+  })
+
+  it('reports no spread when everyone scored the same', () => {
+    expect(calculateMean([30, 30, 30])).toBe(30)
+    expect(calculateSpread([30, 30, 30])).toBe(0)
+  })
+
+  // Population rather than sample: 20 and 30 are 5 either side of 25, not 7.07.
+  it('measures the population deviation, as stddev_pop does', () => {
+    expect(calculateSpread([20, 30])).toBe(5)
+  })
+})
+
+describe('toCardRating', () => {
+  it('centres a player when there is no spread to place them in', () => {
+    expect(toCardRating(30, 30, 0)).toBe(70)
+    expect(toCardRating(null, 25, 5)).toBe(70)
+    expect(toCardRating(30, null, 5)).toBe(70)
+  })
+
+  it('moves twelve points per standard deviation', () => {
+    expect(toCardRating(30, 25, 5)).toBe(82)
+    expect(toCardRating(20, 25, 5)).toBe(58)
+    expect(toCardRating(25, 25, 5)).toBe(70)
+  })
+
+  it('bounds the scale at 45 and 99', () => {
+    expect(toCardRating(100, 25, 5)).toBe(99)
+    expect(toCardRating(0, 25, 5)).toBe(45)
   })
 })
 

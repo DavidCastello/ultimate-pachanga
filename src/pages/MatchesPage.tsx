@@ -8,12 +8,8 @@ import { EmptyState } from '@/components/EmptyState'
 import { MatchCard } from '@/components/MatchCard'
 import { fetchMatches, matchKeys } from '@/features/matches/api'
 import { useMembership } from '@/features/league/useLeague'
+import { isUpcomingMatch } from '@/lib/matchLifecycle'
 import type { MatchRow } from '@/types/domain'
-
-/** Anything not yet scored or cancelled is still ahead of the league. */
-function isUpcoming(match: MatchRow): boolean {
-  return match.status === 'draft' || match.status === 'scheduled'
-}
 
 function MatchSection({
   title,
@@ -51,14 +47,14 @@ export function MatchesPage() {
 
   // Fixtures ahead read best soonest-first; results read best newest-first.
   const upcoming = (matches ?? [])
-    .filter(isUpcoming)
+    .filter((match) => isUpcomingMatch(match.status))
     .sort(
       (left, right) =>
         new Date(left.played_at).getTime() -
         new Date(right.played_at).getTime(),
     )
 
-  const past = (matches ?? []).filter((match) => !isUpcoming(match))
+  const past = (matches ?? []).filter((match) => !isUpcomingMatch(match.status))
 
   return (
     <div className="flex flex-col gap-6">

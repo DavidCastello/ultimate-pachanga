@@ -61,6 +61,7 @@ function renderLineups(
       homeFormation="2-3-1"
       awayFormation="2-3-1"
       interactive
+      canChangeFormation
       onFormationChange={onFormationChange}
       onLineupChange={onLineupChange}
       {...overrides}
@@ -330,9 +331,28 @@ describe('PitchLineups', () => {
     })
   })
 
+  describe('a member arranging a match still to be played', () => {
+    it('can move players but not change the shape', async () => {
+      const user = userEvent.setup()
+      const { onLineupChange, onFormationChange } = renderLineups({
+        canChangeFormation: false,
+      })
+
+      expect(
+        screen.queryByLabelText('Formación de Los Cracks'),
+      ).not.toBeInTheDocument()
+
+      await user.click(screen.getByLabelText(/^Defensa Uno,/))
+      await user.click(screen.getByLabelText(/^Defensa Dos,/))
+
+      expect(onLineupChange).toHaveBeenCalledTimes(1)
+      expect(onFormationChange).not.toHaveBeenCalled()
+    })
+  })
+
   describe('read-only for members', () => {
     it('shows the formation without a selector', () => {
-      renderLineups({ interactive: false })
+      renderLineups({ interactive: false, canChangeFormation: false })
 
       expect(
         screen.queryByLabelText('Formación de Los Cracks'),
@@ -341,7 +361,7 @@ describe('PitchLineups', () => {
     })
 
     it('makes no player interactive', () => {
-      renderLineups({ interactive: false })
+      renderLineups({ interactive: false, canChangeFormation: false })
 
       expect(screen.queryAllByRole('button')).toHaveLength(0)
       expect(screen.getByText('Portero Local')).toBeInTheDocument()
@@ -349,7 +369,10 @@ describe('PitchLineups', () => {
 
     it('ignores clicks', async () => {
       const user = userEvent.setup()
-      const { onLineupChange } = renderLineups({ interactive: false })
+      const { onLineupChange } = renderLineups({
+        interactive: false,
+        canChangeFormation: false,
+      })
 
       await user.click(screen.getByText('Defensa Uno'))
       await user.click(screen.getByText('Defensa Dos'))
@@ -358,7 +381,7 @@ describe('PitchLineups', () => {
     })
 
     it('omits the drag instructions', () => {
-      renderLineups({ interactive: false })
+      renderLineups({ interactive: false, canChangeFormation: false })
       expect(screen.queryByText(/Arrastra un jugador/)).not.toBeInTheDocument()
     })
   })

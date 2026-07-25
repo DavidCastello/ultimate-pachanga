@@ -57,8 +57,9 @@ values (
   'authenticated',
   'dcastellotejera@gmail.com',
   extensions.crypt('pachanga', extensions.gen_salt('bf')),
-  -- Confirmed, because email confirmation is off locally and an unconfirmed
-  -- address cannot sign in once it is on.
+  -- Confirmed, because an unconfirmed address cannot sign in and email
+  -- confirmation is on locally. Without this, `db reset` would leave the owner
+  -- locked out and production/03_results.sql with nobody to import as.
   now(),
   '{"provider": "email", "providers": ["email"]}'::jsonb,
   '{}'::jsonb,

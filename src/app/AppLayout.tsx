@@ -44,7 +44,7 @@ const NAVIGATION: NavigationItem[] = [
   { to: '/league', label: 'Liga', icon: Shield },
   { to: '/players', label: 'Jugadores', icon: Users },
   { to: '/matches', label: 'Partidos', icon: CalendarDays },
-  { to: '/rankings', label: 'Clasificaciones', icon: BarChart3 },
+  { to: '/stats', label: 'Estadísticas', icon: BarChart3 },
   { to: '/profile', label: 'Mi perfil', icon: UserRound },
 ]
 

@@ -6,6 +6,15 @@ import { renderWithProviders } from '@/test/render'
 import { buildMatch } from '@/test/factories'
 import type { MatchRow } from '@/types/domain'
 
+// The photograph preview resolves stored paths through the Supabase storage
+// client, which would otherwise require a configured environment.
+vi.mock('@/lib/supabase', () => ({
+  getMatchPhotoUrl: (path: string | null) =>
+    path ? `https://example.test/match-photos/${path}` : null,
+  supabase: {},
+  MATCH_PHOTOS_BUCKET: 'match-photos',
+}))
+
 const EXISTING_MATCH = buildMatch()
 
 function renderForm(match?: MatchRow) {
@@ -63,12 +72,70 @@ describe('MatchForm', () => {
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
 
-    const input = onSubmit.mock.calls[0][0]
+    const { match: input } = onSubmit.mock.calls[0][0]
     expect(input.title).toBe('Jornada 4')
     expect(input.location).toBe('Roco')
     // The column is timestamptz, so the form must hand over an instant.
     expect(input.playedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
     expect(Number.isNaN(Date.parse(input.playedAt))).toBe(false)
+  })
+
+  // Uploading is never required: a match with no photograph of its own falls
+  // back to the picture bundled for its location.
+  it('submits without a photograph, previewing the venue picture', async () => {
+    const user = userEvent.setup()
+    const { onSubmit } = renderForm()
+
+    await user.type(screen.getByLabelText('Título'), 'Jornada 4')
+    await user.type(screen.getByLabelText('Lugar'), 'UIB')
+
+    expect(screen.getByTestId('match-form-photo-preview')).toHaveAttribute(
+      'src',
+      '/venues/uib.webp',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    expect(onSubmit.mock.calls[0][0].photo).toBeNull()
+  })
+
+  it('hands over a chosen photograph beside the match', async () => {
+    const user = userEvent.setup()
+    const { onSubmit } = renderForm(EXISTING_MATCH)
+    const photo = new File(['pitch'], 'pitch.webp', { type: 'image/webp' })
+
+    await user.upload(screen.getByLabelText('Foto del partido'), photo)
+
+    expect(await screen.findByText('pitch.webp')).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    expect(onSubmit.mock.calls[0][0].photo).toBe(photo)
+  })
+
+  // The bucket would reject it too; saying so here spares the administrator a
+  // failed upload after the match has already been written.
+  it('refuses a photograph the bucket would not accept', async () => {
+    const user = userEvent.setup()
+    const { onSubmit } = renderForm()
+    const tooLarge = new File(
+      [new ArrayBuffer(4 * 1024 * 1024)],
+      'panoramica.webp',
+      { type: 'image/webp' },
+    )
+
+    await user.upload(screen.getByLabelText('Foto del partido'), tooLarge)
+
+    expect(await screen.findByText(/no puede superar los 3 MB/)).toBeVisible()
+
+    await user.type(screen.getByLabelText('Título'), 'Jornada 4')
+    await user.type(screen.getByLabelText('Lugar'), 'Roco')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    expect(onSubmit.mock.calls[0][0].photo).toBeNull()
   })
 
   it('pre-fills an existing match', () => {
