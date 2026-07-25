@@ -30,17 +30,17 @@ set local role authenticated;
 set local request.jwt.claims to
   '{"sub": "99999999-9999-4999-8999-00000000000a", "role": "authenticated"}';
 
--- The seeded Jornada 3 is scheduled with a full squad and no scores yet.
+-- The seeded Jornada 5 is scheduled with a full squad and no scores yet.
 select is(
   (select status::text from public.matches
-   where id = '33333333-3333-4333-8333-000000000003'),
+   where id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'),
   'scheduled',
   'the target match starts out scheduled'
 );
 
 select is(
   (select count(*)::integer from public.player_match_scores
-   where match_id = '33333333-3333-4333-8333-000000000003'),
+   where match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'),
   0,
   'the target match starts out unscored'
 );
@@ -48,23 +48,23 @@ select is(
 select is(
   (select (result ->> 'imported_count')::integer
    from public.import_match_scores(
-     '33333333-3333-4333-8333-000000000003',
+     'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
      '[
-        {"player_code": "PLR-A7K2",
+        {"player_code": "JORDI",
          "metric_scores": {"attack": 6, "defence": 9, "tactics": 8,
                            "physical": 7},
          "attribute_codes": ["zamora"],
          "goals": 2, "victory": 1},
-        {"player_code": "PLR-B9F1",
+        {"player_code": "JOSE",
          "metric_scores": {"attack": 2, "defence": 8, "tactics": 7,
                            "physical": 6},
          "attribute_codes": [],
          "goals": 0, "victory": 0.5},
-        {"player_code": "PLR-K1Q2",
+        {"player_code": "PERICO",
          "metric_scores": {"attack": 8, "defence": 8, "tactics": 9,
                            "physical": 7},
          "attribute_codes": ["mvp", "puskas"]},
-        {"player_code": "PLR-L7R8",
+        {"player_code": "DAVID-C",
          "metric_scores": {"attack": 5, "defence": 4, "tactics": 5,
                            "physical": 6},
          "attribute_codes": ["injury"]}
@@ -81,8 +81,8 @@ select is(
 select is(
   (select base_score from public.player_match_scores s
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-A7K2'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'JORDI'),
   30::numeric(6, 3),
   'base score is the sum of the active metrics'
 );
@@ -90,8 +90,8 @@ select is(
 select is(
   (select attribute_points from public.player_match_scores s
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-A7K2'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'JORDI'),
   2,
   'a single positive attribute contributes its points'
 );
@@ -99,8 +99,8 @@ select is(
 select is(
   (select final_score from public.player_match_scores s
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-A7K2'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'JORDI'),
   34::numeric(6, 3),
   'final score is base, plus attribute points, plus two for the win'
 );
@@ -108,8 +108,8 @@ select is(
 select is(
   (select attribute_points from public.player_match_scores s
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-K1Q2'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'PERICO'),
   4,
   'multiple attributes accumulate'
 );
@@ -122,8 +122,8 @@ select is(
 select is(
   (select final_score from public.player_match_scores s
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-K1Q2'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'PERICO'),
   36::numeric(6, 3),
   'final score may exceed the metric maximum'
 );
@@ -131,8 +131,8 @@ select is(
 select is(
   (select final_score from public.player_match_scores s
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-L7R8'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'DAVID-C'),
   18::numeric(6, 3),
   'a negative attribute subtracts'
 );
@@ -142,8 +142,8 @@ select is(
    from public.player_match_score_attributes sa
    join public.player_match_scores s on s.id = sa.player_match_score_id
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-K1Q2'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'PERICO'),
   2,
   'each assigned attribute is recorded'
 );
@@ -154,14 +154,14 @@ select is(
 
 select is(
   (select status::text from public.matches
-   where id = '33333333-3333-4333-8333-000000000003'),
+   where id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'),
   'scored',
   'a successful import marks the match as scored'
 );
 
 select ok(
   (select results_imported_at is not null from public.matches
-   where id = '33333333-3333-4333-8333-000000000003'),
+   where id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'),
   'a successful import stamps the import time'
 );
 
@@ -172,8 +172,8 @@ select ok(
 select is(
   (select goals from public.player_match_scores s
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-A7K2'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'JORDI'),
   2,
   'goals are recorded as given'
 );
@@ -183,8 +183,8 @@ select is(
 select is(
   (select victory from public.player_match_scores s
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-B9F1'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'JOSE'),
   0.5::numeric(3, 2),
   'a draw is stored as half a victory'
 );
@@ -193,8 +193,8 @@ select is(
 select is(
   (select final_score from public.player_match_scores s
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-B9F1'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'JOSE'),
   24::numeric(6, 3),
   'a draw is worth one point'
 );
@@ -203,8 +203,8 @@ select is(
 select is(
   (select victory from public.player_match_scores s
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-K1Q2'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'PERICO'),
   0::numeric(3, 2),
   'an omitted victory is a defeat rather than an error'
 );

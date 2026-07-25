@@ -28,12 +28,12 @@ set local request.jwt.claims to
 
 -- First import: 6/6/6/6 with an MVP.
 select public.import_match_scores(
-  '33333333-3333-4333-8333-000000000003',
-  '[{"player_code": "PLR-A7K2",
+  'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+  '[{"player_code": "JORDI",
      "metric_scores": {"attack": 6, "defence": 6, "tactics": 6,
                        "physical": 6},
      "attribute_codes": ["mvp"]},
-    {"player_code": "PLR-B9F1",
+    {"player_code": "JOSE",
      "metric_scores": {"attack": 4, "defence": 8, "tactics": 6,
                        "physical": 6},
      "attribute_codes": []}]'::jsonb
@@ -41,7 +41,7 @@ select public.import_match_scores(
 
 select is(
   (select count(*)::integer from public.player_match_scores
-   where match_id = '33333333-3333-4333-8333-000000000003'),
+   where match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'),
   2,
   'the first import writes one row per player'
 );
@@ -49,20 +49,20 @@ select is(
 select is(
   (select final_score from public.player_match_scores s
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-A7K2'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'JORDI'),
   26::numeric(6, 3),
   'the first import scores 24 base plus 2 for the MVP'
 );
 
 -- Correction: the scores were wrong and the MVP went to someone else.
 select public.import_match_scores(
-  '33333333-3333-4333-8333-000000000003',
-  '[{"player_code": "PLR-A7K2",
+  'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+  '[{"player_code": "JORDI",
      "metric_scores": {"attack": 8, "defence": 8, "tactics": 8,
                        "physical": 8},
      "attribute_codes": ["zamora", "puskas"]},
-    {"player_code": "PLR-B9F1",
+    {"player_code": "JOSE",
      "metric_scores": {"attack": 4, "defence": 8, "tactics": 6,
                        "physical": 6},
      "attribute_codes": []}]'::jsonb
@@ -70,7 +70,7 @@ select public.import_match_scores(
 
 select is(
   (select count(*)::integer from public.player_match_scores
-   where match_id = '33333333-3333-4333-8333-000000000003'),
+   where match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'),
   2,
   're-importing upserts rather than inserting duplicates'
 );
@@ -78,8 +78,8 @@ select is(
 select is(
   (select base_score from public.player_match_scores s
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-A7K2'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'JORDI'),
   32::numeric(6, 3),
   'the corrected base score replaces the original'
 );
@@ -87,8 +87,8 @@ select is(
 select is(
   (select attribute_points from public.player_match_scores s
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-A7K2'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'JORDI'),
   4,
   'attribute points are recomputed from the new attribute set'
 );
@@ -96,8 +96,8 @@ select is(
 select is(
   (select final_score from public.player_match_scores s
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-A7K2'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'JORDI'),
   36::numeric(6, 3),
   'the corrected final score is 32 plus 4'
 );
@@ -107,8 +107,8 @@ select is(
    from public.player_match_score_attributes sa
    join public.player_match_scores s on s.id = sa.player_match_score_id
    join public.players p on p.id = s.player_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-A7K2'),
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'JORDI'),
   2,
   'the previous attribute set is replaced, not added to'
 );
@@ -119,8 +119,8 @@ select is(
    join public.player_match_scores s on s.id = sa.player_match_score_id
    join public.players p on p.id = s.player_id
    join public.league_attributes a on a.id = sa.league_attribute_id
-   where s.match_id = '33333333-3333-4333-8333-000000000003'
-     and p.player_code = 'PLR-A7K2'
+   where s.match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
+     and p.player_code = 'JORDI'
      and a.code = 'mvp'),
   0,
   'the withdrawn MVP is gone'
@@ -128,7 +128,7 @@ select is(
 
 select is(
   (select status::text from public.matches
-   where id = '33333333-3333-4333-8333-000000000003'),
+   where id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'),
   'scored',
   'the match remains scored after a correction'
 );
@@ -137,8 +137,8 @@ select is(
 -- blocks a re-import.
 select lives_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000001',
-      '[{"player_code": "PLR-A7K2",
+      '44444444-4444-4444-8444-000000000002',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 7, "defence": 7, "tactics": 7,
                            "physical": 7},
          "attribute_codes": []}]'::jsonb

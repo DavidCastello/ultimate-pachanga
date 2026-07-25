@@ -46,7 +46,9 @@ jobs:
         with:
           version: latest
 
-      # Applies every migration and then seed.sql, so a broken migration fails
+      # Applies every migration and then the seed files, which include the
+      # production load scripts — so a broken migration or a broken production
+      # script fails
       # here rather than against the production database.
       - name: Start local Supabase stack
         run: supabase start

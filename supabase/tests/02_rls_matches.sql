@@ -46,9 +46,9 @@ set local request.jwt.claims to
 select ok(
   (select count(*) from public.matches
    where id in (
-     '33333333-3333-4333-8333-000000000001',
-     '33333333-3333-4333-8333-000000000002',
-     '33333333-3333-4333-8333-000000000003'
+     '44444444-4444-4444-8444-000000000002',
+     '44444444-4444-4444-8444-000000000003',
+     'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
    )) = 3,
   'a member can read the fixture list'
 );
@@ -97,7 +97,7 @@ select throws_ok(
 
 with attempted as (
   update public.matches set location = 'Otro sitio'
-  where id = '33333333-3333-4333-8333-000000000003'
+  where id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
   returning 1
 )
 select is(
@@ -109,8 +109,8 @@ select is(
 select throws_ok(
   $$insert into public.match_players (match_id, player_id)
     values (
-      '33333333-3333-4333-8333-000000000003',
-      '22222222-2222-4222-8222-000000000015'
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '55555555-5555-4555-8555-000000000016'
     )$$,
   '42501',
   null,
@@ -119,7 +119,7 @@ select throws_ok(
 
 with attempted as (
   delete from public.match_players
-  where match_id = '33333333-3333-4333-8333-000000000003'
+  where match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'
   returning 1
 )
 select is(
@@ -132,8 +132,8 @@ select throws_ok(
   $$insert into public.player_match_scores
       (match_id, player_id, metric_scores, base_score, final_score)
     values (
-      '33333333-3333-4333-8333-000000000003',
-      '22222222-2222-4222-8222-000000000001',
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '55555555-5555-4555-8555-000000000001',
       '{"attack": 10, "defence": 10, "tactics": 10, "physical": 10}',
       10, 10
     )$$,
@@ -144,7 +144,7 @@ select throws_ok(
 
 with attempted as (
   update public.player_match_scores set final_score = 10
-  where match_id = '33333333-3333-4333-8333-000000000001'
+  where match_id = '44444444-4444-4444-8444-000000000002'
   returning 1
 )
 select is(
@@ -178,8 +178,8 @@ select lives_ok(
     values (
       '33333333-3333-4333-8333-0000000000ff',
       '11111111-1111-4111-8111-111111111111',
-      'Jornada 4', 'Polideportivo Roco', now() + interval '14 days',
-      'Los Cracks', 'Los Pachangueros', 'scheduled'
+      'Jornada de prueba', 'Campo de fútbol UIB', now() + interval '14 days',
+      'Blanco', 'Negro', 'scheduled'
     )$$,
   'an administrator can create a match'
 );
@@ -188,7 +188,7 @@ select lives_ok(
   $$insert into public.match_players (match_id, player_id, team_side)
     values (
       '33333333-3333-4333-8333-0000000000ff',
-      '22222222-2222-4222-8222-000000000001',
+      '55555555-5555-4555-8555-000000000001',
       'home'
     )$$,
   'an administrator can select a squad'

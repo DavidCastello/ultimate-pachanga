@@ -42,8 +42,8 @@ set local request.jwt.claims to
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 5, "defence": 5, "tactics": 5,
                            "physical": 5}}]'::jsonb
     )$$,
@@ -54,7 +54,7 @@ select throws_ok(
 
 select is(
   (select count(*)::integer from public.player_match_scores
-   where match_id = '33333333-3333-4333-8333-000000000003'),
+   where match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'),
   0,
   'nothing was written after the member attempt'
 );
@@ -66,11 +66,11 @@ select is(
 set local request.jwt.claims to
   '{"sub": "99999999-9999-4999-8999-00000000000a", "role": "authenticated"}';
 
--- Player 15 exists but was never called up for any match.
+-- RODRI is on the roster but was not called up for this fixture.
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-Q2X3",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "RODRI",
          "metric_scores": {"attack": 5, "defence": 5, "tactics": 5,
                            "physical": 5}}]'::jsonb
     )$$,
@@ -81,14 +81,14 @@ select throws_ok(
 
 select is(
   (select count(*)::integer from public.player_match_scores
-   where match_id = '33333333-3333-4333-8333-000000000003'),
+   where match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'),
   0,
   'nothing was written after the non-convoked attempt'
 );
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
       '[{"player_code": "PLR-NOPE",
          "metric_scores": {"attack": 5, "defence": 5, "tactics": 5,
                            "physical": 5}}]'::jsonb
@@ -100,8 +100,8 @@ select throws_ok(
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 11, "defence": 5, "tactics": 5,
                            "physical": 5}}]'::jsonb
     )$$,
@@ -112,8 +112,8 @@ select throws_ok(
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": -1, "defence": 5, "tactics": 5,
                            "physical": 5}}]'::jsonb
     )$$,
@@ -124,8 +124,8 @@ select throws_ok(
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 5, "defence": 5, "tactics": 5}}]'::jsonb
     )$$,
   '22023',
@@ -135,8 +135,8 @@ select throws_ok(
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": "muy bueno", "defence": 5,
                            "tactics": 5, "physical": 5}}]'::jsonb
     )$$,
@@ -148,8 +148,8 @@ select throws_ok(
 -- A mistyped metric must fail rather than silently drop out of the average.
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 5, "defence": 5, "tactics": 5,
                            "physical": 5, "velocidad": 9}}]'::jsonb
     )$$,
@@ -160,8 +160,8 @@ select throws_ok(
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 5, "defence": 5, "tactics": 5,
                            "physical": 5},
          "attribute_codes": ["balon_de_oro"]}]'::jsonb
@@ -173,8 +173,8 @@ select throws_ok(
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 5, "defence": 5, "tactics": 5,
                            "physical": 5},
          "attribute_codes": ["mvp", "mvp"]}]'::jsonb
@@ -186,11 +186,11 @@ select throws_ok(
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 5, "defence": 5, "tactics": 5,
                            "physical": 5}},
-        {"player_code": "PLR-A7K2",
+        {"player_code": "JORDI",
          "metric_scores": {"attack": 6, "defence": 6, "tactics": 6,
                            "physical": 6}}]'::jsonb
     )$$,
@@ -201,7 +201,7 @@ select throws_ok(
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003', '[]'::jsonb
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001', '[]'::jsonb
     )$$,
   '22023',
   null,
@@ -210,7 +210,7 @@ select throws_ok(
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003', '{}'::jsonb
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001', '{}'::jsonb
     )$$,
   '22023',
   null,
@@ -220,7 +220,7 @@ select throws_ok(
 select throws_ok(
   $$select public.import_match_scores(
       '55555555-5555-4555-8555-000000000001',
-      '[{"player_code": "PLR-A7K2",
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 5, "defence": 5, "tactics": 5,
                            "physical": 5}}]'::jsonb
     )$$,
@@ -236,21 +236,21 @@ select throws_ok(
 
 select is(
   (select count(*)::integer from public.player_match_scores
-   where match_id = '33333333-3333-4333-8333-000000000003'),
+   where match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'),
   0,
   'no scores exist after every rejected import'
 );
 
 select is(
   (select status::text from public.matches
-   where id = '33333333-3333-4333-8333-000000000003'),
+   where id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'),
   'scheduled',
   'the match status is untouched by rejected imports'
 );
 
 select ok(
   (select results_imported_at is null from public.matches
-   where id = '33333333-3333-4333-8333-000000000003'),
+   where id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'),
   'the import timestamp is untouched by rejected imports'
 );
 
@@ -260,11 +260,11 @@ select ok(
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 7, "defence": 7, "tactics": 7,
                            "physical": 7}},
-        {"player_code": "PLR-B9F1",
+        {"player_code": "JOSE",
          "metric_scores": {"attack": 99, "defence": 7, "tactics": 7,
                            "physical": 7}}]'::jsonb
     )$$,
@@ -275,7 +275,7 @@ select throws_ok(
 
 select is(
   (select count(*)::integer from public.player_match_scores
-   where match_id = '33333333-3333-4333-8333-000000000003'),
+   where match_id = 'bbbbbbbb-bbbb-4bbb-8bbb-000000000001'),
   0,
   'the valid row in a failed batch was rolled back too'
 );
@@ -289,8 +289,8 @@ select is(
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 7, "defence": 7, "tactics": 7,
                            "physical": 7},
          "victory": 1.5}]'::jsonb
@@ -302,8 +302,8 @@ select throws_ok(
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 7, "defence": 7, "tactics": 7,
                            "physical": 7},
          "victory": -0.5}]'::jsonb
@@ -316,8 +316,8 @@ select throws_ok(
 -- A victory typed as "yes" must not quietly become a defeat.
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 7, "defence": 7, "tactics": 7,
                            "physical": 7},
          "victory": "si"}]'::jsonb
@@ -329,8 +329,8 @@ select throws_ok(
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 7, "defence": 7, "tactics": 7,
                            "physical": 7},
          "goals": 1.5}]'::jsonb
@@ -342,8 +342,8 @@ select throws_ok(
 
 select throws_ok(
   $$select public.import_match_scores(
-      '33333333-3333-4333-8333-000000000003',
-      '[{"player_code": "PLR-A7K2",
+      'bbbbbbbb-bbbb-4bbb-8bbb-000000000001',
+      '[{"player_code": "JORDI",
          "metric_scores": {"attack": 7, "defence": 7, "tactics": 7,
                            "physical": 7},
          "goals": -1}]'::jsonb

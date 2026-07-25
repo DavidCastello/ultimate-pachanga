@@ -108,7 +108,7 @@ db-stop: ## Stop it
 db-status: ## Print local URLs and keys
 	npm run db:status
 
-db-reset: ## Recreate the database from migrations + seed.sql
+db-reset: ## Recreate the database from migrations + the seed files
 	npm run db:reset
 
 db-test: ## Run the pgTAP tests
@@ -164,10 +164,13 @@ prod-results: ## Import the real match results
 
 prod-load: prod-roster prod-fixtures prod-results ## All three, in order
 
-# Talks to the local container directly, so no psql and no PROD_DB_URL. Leaves
-# the local database holding the dev seed *and* the real league; 'make db-reset'
-# puts it back.
-prod-dry-run: ## Rehearse the production load against the local stack
+# `make db-reset` already runs these three as part of seeding, so this is not
+# how you get the data locally — it is how you prove a *second* run corrects
+# rather than duplicates, which is the property that makes them safe to re-run
+# against production. Counts should be identical afterwards.
+#
+# Talks to the local container directly, so no psql and no PROD_DB_URL.
+prod-dry-run: ## Re-run the production scripts locally to prove they are idempotent
 	@docker ps --format '{{.Names}}' | grep -qx $(LOCAL_DB_CONTAINER) || { \
 	  echo "The local stack is not running. Start it with 'make db-start'."; \
 	  exit 1; \

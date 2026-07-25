@@ -129,30 +129,30 @@ one does.
 delegates to the `npm run` script of the same name, which still works if you
 prefer it.
 
-| Command              | Purpose                                              |
-| -------------------- | ---------------------------------------------------- |
-| `make dev-local`     | Dev server against the local stack                   |
-| `make dev`           | Dev server against the deployed database             |
-| `make build`         | Type-check and build to `dist/`                      |
-| `make preview`       | Serve the production build locally                   |
-| `make lint`          | ESLint                                               |
-| `make format`        | Prettier, writing changes                            |
-| `make check`         | Prettier and ESLint, check only (what CI runs)       |
-| `make test`          | Vitest once                                          |
-| `make test-watch`    | Vitest in watch mode                                 |
-| `make coverage`      | Vitest with coverage                                 |
-| `make verify`        | Check, both test suites and the build                |
-| `make db-start`      | Start the local Supabase stack                       |
-| `make db-stop`       | Stop it                                              |
-| `make db-status`     | Print local URLs and keys                            |
-| `make db-reset`      | Recreate the database from migrations + `seed.sql`   |
-| `make db-test`       | Run pgTAP tests in `supabase/tests/`                 |
-| `make db-types`      | Regenerate `src/types/database.ts` from the schema   |
-| `make prod-roster`   | Load the real roster into the deployed database      |
-| `make prod-fixtures` | Load the real matches and squads                     |
-| `make prod-results`  | Import the real match results                        |
-| `make prod-load`     | All three, in order                                  |
-| `make prod-dry-run`  | Rehearse the production load against the local stack |
+| Command              | Purpose                                                |
+| -------------------- | ------------------------------------------------------ |
+| `make dev-local`     | Dev server against the local stack                     |
+| `make dev`           | Dev server against the deployed database               |
+| `make build`         | Type-check and build to `dist/`                        |
+| `make preview`       | Serve the production build locally                     |
+| `make lint`          | ESLint                                                 |
+| `make format`        | Prettier, writing changes                              |
+| `make check`         | Prettier and ESLint, check only (what CI runs)         |
+| `make test`          | Vitest once                                            |
+| `make test-watch`    | Vitest in watch mode                                   |
+| `make coverage`      | Vitest with coverage                                   |
+| `make verify`        | Check, both test suites and the build                  |
+| `make db-start`      | Start the local Supabase stack                         |
+| `make db-stop`       | Stop it                                                |
+| `make db-status`     | Print local URLs and keys                              |
+| `make db-reset`      | Recreate the database from migrations + the seed files |
+| `make db-test`       | Run pgTAP tests in `supabase/tests/`                   |
+| `make db-types`      | Regenerate `src/types/database.ts` from the schema     |
+| `make prod-roster`   | Load the real roster into the deployed database        |
+| `make prod-fixtures` | Load the real matches and squads                       |
+| `make prod-results`  | Import the real match results                          |
+| `make prod-load`     | All three, in order                                    |
+| `make prod-dry-run`  | Rehearse the production load against the local stack   |
 
 Re-run `make db-types` after any schema change.
 
@@ -187,15 +187,20 @@ src/
 supabase/
 ├── migrations/     schema, RLS, functions, views, storage policies
 ├── production/     the real league's roster, fixtures and results
+├── seeds/          development-only: the owner's account, one upcoming fixture
 ├── tests/          pgTAP
-├── seed.sql        development data only
 └── config.toml
 ```
 
-`supabase/production/` is applied by hand, once, and is deliberately not
-migrations: migrations run on every `db reset` and would collide with
-`seed.sql`. Reference data a league cannot function without belongs in
-`migrations/`; one league's history belongs there.
+**The development database is the production database.** `[db.seed] sql_paths`
+in `config.toml` points `db reset` at `production/`, so the league you see
+locally is the real one, loaded from the very files that load production — every
+reset rehearses the deploy, and so does CI. `seeds/` holds the only two things
+that exist locally and nowhere else: the owner's account, so the app is
+reachable without registering again, and one fixture still to be played, which
+the real league does not have and half the app needs.
+
+Neither of those reaches production. `supabase db push` carries migrations only.
 
 ## Scoring model
 
@@ -418,8 +423,10 @@ export PROD_DB_URL='postgresql://postgres.<ref>:<password>@...pooler.supabase.co
 make prod-load
 ```
 
-`make prod-dry-run` rehearses the same three against the local stack first, and
-needs neither `psql` nor `PROD_DB_URL`.
+No separate rehearsal is needed: `make db-reset` already runs these three, so a
+script that would fail against production fails locally and in CI first.
+`make prod-dry-run` runs them a second time on top of the seeded database, which
+is how you check that a re-run corrects rather than duplicates.
 
 Two things about it worth knowing here, with the rest — including how to reach
 the tables directly afterwards, and what not to hand-edit — in

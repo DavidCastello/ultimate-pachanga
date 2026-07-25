@@ -38,14 +38,14 @@ values
 
 select is(
   (select home_formation::text from public.matches
-   where id = '33333333-3333-4333-8333-000000000001'),
+   where id = '44444444-4444-4444-8444-000000000002'),
   '2-3-1',
   'matches default to the 2-3-1 formation'
 );
 
 select is(
   (select count(*)::integer from public.match_players
-   where match_id = '33333333-3333-4333-8333-000000000001'
+   where match_id = '44444444-4444-4444-8444-000000000002'
      and team_side = 'home'
      and pitch_slot is not null),
   7,
@@ -56,7 +56,7 @@ select is(
   (select p.preferred_position::text
    from public.match_players mp
    join public.players p on p.id = mp.player_id
-   where mp.match_id = '33333333-3333-4333-8333-000000000001'
+   where mp.match_id = '44444444-4444-4444-8444-000000000002'
      and mp.team_side = 'home'
      and mp.pitch_slot = 0),
   'GK',
@@ -70,7 +70,7 @@ select is(
 select throws_ok(
   $$update public.match_players
     set pitch_slot = 1
-    where match_id = '33333333-3333-4333-8333-000000000001'
+    where match_id = '44444444-4444-4444-8444-000000000002'
       and team_side = 'home'
       and pitch_slot = 2$$,
   '23505',
@@ -82,7 +82,7 @@ select throws_ok(
 select lives_ok(
   $$update public.match_players
     set pitch_slot = 4
-    where match_id = '33333333-3333-4333-8333-000000000002'
+    where match_id = '44444444-4444-4444-8444-000000000003'
       and team_side = 'away'
       and pitch_slot = 4$$,
   'the two teams number their slots independently'
@@ -91,7 +91,7 @@ select lives_ok(
 select throws_ok(
   $$update public.match_players
     set pitch_slot = 7
-    where match_id = '33333333-3333-4333-8333-000000000001'
+    where match_id = '44444444-4444-4444-8444-000000000002'
       and team_side = 'home'
       and pitch_slot = 1$$,
   '23514',
@@ -102,7 +102,7 @@ select throws_ok(
 select throws_ok(
   $$update public.match_players
     set pitch_slot = -1
-    where match_id = '33333333-3333-4333-8333-000000000001'
+    where match_id = '44444444-4444-4444-8444-000000000002'
       and team_side = 'home'
       and pitch_slot = 1$$,
   '23514',
@@ -115,14 +115,14 @@ select throws_ok(
 select lives_ok(
   $$update public.match_players
     set pitch_slot = null
-    where match_id = '33333333-3333-4333-8333-000000000001'
+    where match_id = '44444444-4444-4444-8444-000000000002'
       and team_side = 'home'$$,
   'a whole team can sit on the bench at once'
 );
 
 select is(
   (select count(*)::integer from public.match_players
-   where match_id = '33333333-3333-4333-8333-000000000001'
+   where match_id = '44444444-4444-4444-8444-000000000002'
      and team_side = 'home'
      and pitch_slot is null),
   7,
@@ -146,7 +146,7 @@ select ok(
 with attempted as (
   update public.match_players
   set pitch_slot = 3
-  where match_id = '33333333-3333-4333-8333-000000000002'
+  where match_id = '44444444-4444-4444-8444-000000000003'
     and team_side = 'home'
     and pitch_slot = 1
   returning 1
@@ -159,7 +159,7 @@ select is(
 
 with attempted as (
   update public.matches set home_formation = '3-3'
-  where id = '33333333-3333-4333-8333-000000000002'
+  where id = '44444444-4444-4444-8444-000000000003'
   returning 1
 )
 select is(
@@ -173,7 +173,7 @@ set local request.jwt.claims to
 
 with attempted as (
   update public.matches set away_formation = '1-3-2'
-  where id = '33333333-3333-4333-8333-000000000002'
+  where id = '44444444-4444-4444-8444-000000000003'
   returning 1
 )
 select is(

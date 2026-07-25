@@ -14,9 +14,19 @@ delete from public.league_members;
 
 -- Unlike every other test file, this one needs the *real* owner address rather
 -- than something @test.local — the trigger recognises that one and nothing
--- else. So it has to make room for it: whoever runs this locally has very
--- probably registered that account already. Rolled back with the rest.
+-- else. So it has to make room for it: the development seed creates that
+-- account, and whoever runs this locally may have registered it again by hand.
+-- Rolled back with the rest.
 delete from auth.users where lower(email) = app.owner_email();
+
+-- The roster is the real league's, and every one of its players is active. A
+-- deactivated one has to exist for the assertion below to mean anything, so
+-- this file makes its own — while still holding postgres rights, because a
+-- member is precisely who must not be able to do this.
+update public.players
+set is_active = false
+where league_id = app.initial_league_id()
+  and player_code = 'CARLOS';
 
 -- The owner. app.handle_new_user recognises this address and nobody else.
 insert into auth.users (id, instance_id, aud, role, email)
@@ -61,7 +71,9 @@ select is(
 -- ---------------------------------------------------------------------------
 -- Choosing a league and a player
 --
--- The seed has 16 players, of whom 15 are active. None start out claimed.
+-- The roster is 22 players, of whom 21 are active after the deactivation
+-- above. None start out claimed: the seeded owner is an administrator without
+-- a player, which is exactly the state the join flow exists to resolve.
 -- ---------------------------------------------------------------------------
 
 set local role authenticated;
@@ -76,14 +88,14 @@ select is(
 
 select is(
   (select unclaimed_player_count from public.list_joinable_leagues()),
-  15,
+  21,
   'the listing counts the players still waiting for an owner'
 );
 
 select is(
   (select count(*)::integer from public.list_unclaimed_players(
      '11111111-1111-4111-8111-111111111111')),
-  15,
+  21,
   'the roster to pick from is every active, unclaimed player'
 );
 
@@ -91,7 +103,7 @@ select ok(
   not exists (
     select 1 from public.list_unclaimed_players(
       '11111111-1111-4111-8111-111111111111')
-    where player_code = 'PLR-R6Y7'
+    where player_code = 'CARLOS'
   ),
   'a deactivated player is not offered'
 );
@@ -102,12 +114,12 @@ select ok(
 
 select public.join_league_as_player(
   '11111111-1111-4111-8111-111111111111',
-  '22222222-2222-4222-8222-000000000002'
+  '55555555-5555-4555-8555-000000000002'
 );
 
 select is(
   (select user_id from public.players
-   where id = '22222222-2222-4222-8222-000000000002'),
+   where id = '55555555-5555-4555-8555-000000000002'),
   '99999999-9999-4999-8999-00000000000d'::uuid,
   'claiming links the player to the account'
 );
@@ -122,14 +134,14 @@ select is(
 select is(
   (select count(*)::integer from public.list_unclaimed_players(
      '11111111-1111-4111-8111-111111111111')),
-  14,
+  20,
   'a claimed player leaves the roster'
 );
 
 select throws_ok(
   $$select public.join_league_as_player(
       '11111111-1111-4111-8111-111111111111',
-      '22222222-2222-4222-8222-000000000003')$$,
+      '55555555-5555-4555-8555-000000000003')$$,
   '23505',
   null,
   'an account that already plays cannot claim a second player'
@@ -143,7 +155,7 @@ set local request.jwt.claims to
 select throws_ok(
   $$select public.join_league_as_player(
       '11111111-1111-4111-8111-111111111111',
-      '22222222-2222-4222-8222-000000000002')$$,
+      '55555555-5555-4555-8555-000000000002')$$,
   '23514',
   null,
   'a player already claimed cannot be claimed again'
@@ -182,20 +194,20 @@ set local request.jwt.claims to
   '{"sub": "99999999-9999-4999-8999-00000000000d", "role": "authenticated"}';
 
 select public.update_own_player_profile(
-  '22222222-2222-4222-8222-000000000002',
+  '55555555-5555-4555-8555-000000000002',
   'Juan', 'García', 'Juanito el Grande', 'CB'::public.player_position
 );
 
 select is(
   (select nickname || ' / ' || preferred_position::text from public.players
-   where id = '22222222-2222-4222-8222-000000000002'),
+   where id = '55555555-5555-4555-8555-000000000002'),
   'Juanito el Grande / CB',
   'a member can rename and reposition their own player'
 );
 
 select throws_ok(
   $$select public.update_own_player_profile(
-      '22222222-2222-4222-8222-000000000003',
+      '55555555-5555-4555-8555-000000000003',
       'Robado', 'Ajeno', null, 'GK'::public.player_position)$$,
   '42501',
   null,
@@ -207,7 +219,7 @@ select throws_ok(
 with attempted as (
   update public.players
   set player_code = 'PLR-ZZZZ', is_active = false
-  where id = '22222222-2222-4222-8222-000000000002'
+  where id = '55555555-5555-4555-8555-000000000002'
   returning 1
 )
 select is(
@@ -222,23 +234,23 @@ select is(
 
 select is(
   public.set_own_player_avatar(
-    '22222222-2222-4222-8222-000000000002', 'jpg'),
+    '55555555-5555-4555-8555-000000000002', 'jpg'),
   '11111111-1111-4111-8111-111111111111/'
-    || '22222222-2222-4222-8222-000000000002.jpg',
+    || '55555555-5555-4555-8555-000000000002.jpg',
   'the avatar path is derived from the league and player, never from input'
 );
 
 select is(
   (select avatar_path from public.players
-   where id = '22222222-2222-4222-8222-000000000002'),
+   where id = '55555555-5555-4555-8555-000000000002'),
   '11111111-1111-4111-8111-111111111111/'
-    || '22222222-2222-4222-8222-000000000002.jpg',
+    || '55555555-5555-4555-8555-000000000002.jpg',
   'and recorded on the card'
 );
 
 select throws_ok(
   $$select public.set_own_player_avatar(
-      '22222222-2222-4222-8222-000000000002', 'svg')$$,
+      '55555555-5555-4555-8555-000000000002', 'svg')$$,
   '23514',
   null,
   'an unsupported image type is refused'
@@ -256,7 +268,7 @@ set local request.jwt.claims to
 
 select public.join_league_as_player(
   '11111111-1111-4111-8111-111111111111',
-  '22222222-2222-4222-8222-000000000001'
+  '55555555-5555-4555-8555-000000000001'
 );
 
 select is(

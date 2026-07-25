@@ -119,12 +119,13 @@ select is(
 );
 
 -- Market values are derived, so a new constant applies immediately with
--- nothing to re-import. The seeded PLR-K1Q2 carries a weighted score of 32.
+-- nothing to re-import. PERICO carries a weighted score of 34.334: a latest of
+-- 38 halved against the 30.667 average of his three earlier matches.
 select is(
   (select market_value_gbp from public.player_market_values mv
    join public.players p on p.id = mv.player_id
-   where p.player_code = 'PLR-K1Q2'),
-  192000000.00::numeric,
+   where p.player_code = 'PERICO'),
+  206004000.00::numeric,
   'doubling the market constant doubles every valuation at once'
 );
 

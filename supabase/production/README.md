@@ -9,11 +9,22 @@ spreadsheet. Run once against the deployed database, in order.
 | `02_fixtures.sql` | `matches`, `match_players`                 | 4+59 |
 | `03_results.sql`  | `player_match_scores` and their attributes |   59 |
 
-**These are not migrations, on purpose.** Migrations run on every
-`supabase db reset`, and this data would then collide with `supabase/seed.sql`
-on every developer's machine. Reference data a league cannot function without
-lives in `supabase/migrations/`; one particular league's history lives here and
-is applied by hand, once.
+**These are not migrations, on purpose.** A migration is schema: something every
+database carrying this application must have, applied automatically and never
+rewritten. One league's roster is not that — it is content, it gets corrected,
+and a second league would not want it. Reference data the app cannot function
+without (the league row, its metrics, its awards) is in
+`supabase/migrations/`; the league's own history is here.
+
+**They are also the local seed.** `config.toml` lists them in `[db.seed]
+sql_paths`, so `supabase db reset` loads the real league onto your machine from
+these very files. The development database is the production database, which is
+the point: what you see locally is what everyone will see, and every reset
+rehearses the deploy. Two development-only files bracket them —
+`seeds/00_dev_owner.sql` for the owner's account and
+`seeds/02_dev_upcoming_match.sql` for a fixture still to be played. Neither has
+any counterpart in production, and seed files are never carried by
+`supabase db push`.
 
 All three are re-runnable. They match on natural keys — `player_code`, fixed
 match ids, `(match_id, player_id)` — so a second run corrects rather than
@@ -83,29 +94,35 @@ Keep `PROD_DB_URL` in the shell or in a file git ignores. It contains the
 database password, which is a full-access credential — it is not a publishable
 key and must never end up in a `VITE_` variable or in `.env.cloud.local`.
 
-### Rehearsing locally first
+### The rehearsal is automatic
 
 ```bash
-make db-reset        # clean dev database
-make dev-local       # register dcastellotejera@gmail.com in the app
-make prod-dry-run    # the three scripts against the local stack
+make db-reset
 ```
 
-`prod-dry-run` talks to the local container directly, so it needs no `psql` and
-no `PROD_DB_URL`. It leaves the local database holding both the dev seed and the
-real league; `make db-reset` puts it back.
+That is the rehearsal. It applies the migrations and then these three scripts,
+so if any of them would fail against production it fails here first — and CI
+runs the same thing on every push. Nothing extra to remember.
 
-Two things afterwards are expected, and neither is a bug:
+```bash
+make prod-dry-run
+```
 
-- **Card ratings and market values will not match production.** Both are
-  **relative** — measured against everyone else's latest score — so the 16
-  seeded dev players move them. On production, where those 16 do not exist,
-  they settle differently.
-- **`make db-test` fails until you reset.** Three assertions in
-  `09_player_user_link.sql` count the seeded roster, and 22 extra players make
-  them wrong. `supabase test db` runs against the database as it stands rather
-  than recreating it, so `make db-reset` before `make db-test`. CI is unaffected:
-  it starts a fresh stack.
+Runs them a second time on top of the already-seeded database. Not how you load
+the data locally — `db reset` did that — but how you check the property that
+makes them safe to re-run against production: the counts must come out
+identical.
+
+Locally you can sign in immediately as `dcastellotejera@gmail.com` /
+`pachanga`, which `seeds/00_dev_owner.sql` creates. That account is an
+administrator with no player claimed, so the join flow is walkable rather than
+skipped.
+
+One figure will differ from production and it is not a bug: **card ratings and
+market values are relative**, measured against everyone else's latest score. The
+development database has one extra fixture (Jornada 5, unscored) which does not
+move them, so in practice the numbers do line up — but any local player you add
+or score will shift everybody's rating, there and in production alike.
 
 ## Reading the data back
 

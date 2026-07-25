@@ -45,35 +45,39 @@
 
 begin;
 
+-- Ids are fixed rather than generated, for the same reason the initial league's
+-- is (migration 001): so that other files can point at a player without a
+-- lookup. The pgTAP suite does exactly that.
 insert into public.players (
-  league_id, player_code, first_name, last_name, nickname, preferred_position
+  id, league_id, player_code, first_name, last_name, nickname,
+  preferred_position
 )
 values
-  (app.initial_league_id(), 'JORDI',    'Giorgio',          'Chellini',      null,           'CB'),
-  (app.initial_league_id(), 'JOSE',     'Jose',             'Mourinho',      null,           'UT'),
-  (app.initial_league_id(), 'PAU-R',    'Pau',              'Cubarsi',       null,           'CB'),
-  (app.initial_league_id(), 'ALEX',     'Alejandro "Caño"', 'Ibagaza',       null,           'CAM'),
-  (app.initial_league_id(), 'SERGIO-M', 'Sergio',           'Busquets',      null,           'CDM'),
-  (app.initial_league_id(), 'JOSEP-M',  'Josep',            'Guardiola',     null,           'CDM'),
-  (app.initial_league_id(), 'JOAN',     'Joanito',          'Williams',      null,           'LW'),
+  ('55555555-5555-4555-8555-000000000001', app.initial_league_id(), 'JORDI',    'Giorgio',          'Chellini',      null,         'CB'),
+  ('55555555-5555-4555-8555-000000000002', app.initial_league_id(), 'JOSE',     'Jose',             'Mourinho',      null,         'UT'),
+  ('55555555-5555-4555-8555-000000000003', app.initial_league_id(), 'PAU-R',    'Pau',              'Cubarsi',       null,         'CB'),
+  ('55555555-5555-4555-8555-000000000004', app.initial_league_id(), 'ALEX',     'Alejandro "Caño"', 'Ibagaza',       null,         'CAM'),
+  ('55555555-5555-4555-8555-000000000005', app.initial_league_id(), 'SERGIO-M', 'Sergio',           'Busquets',      null,         'CDM'),
+  ('55555555-5555-4555-8555-000000000006', app.initial_league_id(), 'JOSEP-M',  'Josep',            'Guardiola',     null,         'CDM'),
+  ('55555555-5555-4555-8555-000000000007', app.initial_league_id(), 'JOAN',     'Joanito',          'Williams',      null,         'LW'),
   -- One-word alias: nickname carries it, first/last only satisfy the column.
-  (app.initial_league_id(), 'PEP-M',    'Pepe',             'Pep',           'Pepe',         'CB'),
-  (app.initial_league_id(), 'RAUL',     'Raul Gonzalez',    'Blanco',        null,           'ST'),
-  (app.initial_league_id(), 'DAVID-C',  'David',            'Villa',         null,           'ST'),
-  (app.initial_league_id(), 'KIRILL',   'Mikel',            'Cirilo',        null,           'UT'),
-  (app.initial_league_id(), 'DAVID-W',  'Daviñaqui',        'Williams',      null,           'ST'),
-  (app.initial_league_id(), 'LLUIS',    'Luis',             'Iniesta',       null,           'CM'),
-  (app.initial_league_id(), 'JAN-M',    'Jan',              'Oblak',         null,           'GK'),
-  (app.initial_league_id(), 'PERICO',   'Perico',           'Van Nistelroy', null,           'ST'),
-  (app.initial_league_id(), 'RODRI',    'R9',               '"O fenomeno"',  null,           'ST'),
-  (app.initial_league_id(), 'SERGI-P',  'Sergio',           'Ramos',         null,           'CB'),
+  ('55555555-5555-4555-8555-000000000008', app.initial_league_id(), 'PEP-M',    'Pepe',             'Pep',           'Pepe',       'CB'),
+  ('55555555-5555-4555-8555-000000000009', app.initial_league_id(), 'RAUL',     'Raul Gonzalez',    'Blanco',        null,         'ST'),
+  ('55555555-5555-4555-8555-000000000010', app.initial_league_id(), 'DAVID-C',  'David',            'Villa',         null,         'ST'),
+  ('55555555-5555-4555-8555-000000000011', app.initial_league_id(), 'KIRILL',   'Mikel',            'Cirilo',        null,         'UT'),
+  ('55555555-5555-4555-8555-000000000012', app.initial_league_id(), 'DAVID-W',  'Daviñaqui',        'Williams',      null,         'ST'),
+  ('55555555-5555-4555-8555-000000000013', app.initial_league_id(), 'LLUIS',    'Luis',             'Iniesta',       null,         'CM'),
+  ('55555555-5555-4555-8555-000000000014', app.initial_league_id(), 'JAN-M',    'Jan',              'Oblak',         null,         'GK'),
+  ('55555555-5555-4555-8555-000000000015', app.initial_league_id(), 'PERICO',   'Perico',           'Van Nistelroy', null,         'ST'),
+  ('55555555-5555-4555-8555-000000000016', app.initial_league_id(), 'RODRI',    'R9',               '"O fenomeno"',  null,         'ST'),
+  ('55555555-5555-4555-8555-000000000017', app.initial_league_id(), 'SERGI-P',  'Sergio',           'Ramos',         null,         'CB'),
   -- One-word alias.
-  (app.initial_league_id(), 'JOSEP-P',  'Guti',             'Josep',         'Guti',         'CAM'),
-  (app.initial_league_id(), 'ALEIX',    'Aleixus',          'Sanchez',       null,           'LW'),
+  ('55555555-5555-4555-8555-000000000018', app.initial_league_id(), 'JOSEP-P',  'Guti',             'Josep',         'Guti',       'CAM'),
+  ('55555555-5555-4555-8555-000000000019', app.initial_league_id(), 'ALEIX',    'Aleixus',          'Sanchez',       null,         'LW'),
   -- One-word alias.
-  (app.initial_league_id(), 'MARC',     'Marcradona',       'Marc',          'Marcradona',   'CAM'),
-  (app.initial_league_id(), 'ANDREU',   'Andrew',           'Ventura',       null,           'GK'),
-  (app.initial_league_id(), 'CARLOS',   'Roberto',          'Carlos',        null,           'LB')
+  ('55555555-5555-4555-8555-000000000020', app.initial_league_id(), 'MARC',     'Marcradona',       'Marc',          'Marcradona', 'CAM'),
+  ('55555555-5555-4555-8555-000000000021', app.initial_league_id(), 'ANDREU',   'Andrew',           'Ventura',       null,         'GK'),
+  ('55555555-5555-4555-8555-000000000022', app.initial_league_id(), 'CARLOS',   'Roberto',          'Carlos',        null,         'LB')
 on conflict (league_id, player_code) do update
   set first_name = excluded.first_name,
       last_name = excluded.last_name,

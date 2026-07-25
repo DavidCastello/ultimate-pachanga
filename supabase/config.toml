@@ -72,7 +72,28 @@ schema_paths = []
 enabled = true
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
-sql_paths = ["./seed.sql"]
+### The local database is the real league.
+#
+# Order matters and is not alphabetical by accident:
+#
+#   00_dev_owner          the owner's account, so the app is reachable after a
+#                         reset and so the results import below has an
+#                         administrator to run as
+#   production/01..03     the real roster, fixtures and results — the very same
+#                         files that load production, so every `db reset`
+#                         rehearses the deploy
+#   02_dev_upcoming_match one fixture still to be played, which the real league
+#                         does not have and half the app needs
+#
+# Only the two `seeds/` files are development-only. Nothing here ever runs
+# against a deployed project: seed files are not carried by `supabase db push`.
+sql_paths = [
+  "./seeds/00_dev_owner.sql",
+  "./production/01_roster.sql",
+  "./production/02_fixtures.sql",
+  "./production/03_results.sql",
+  "./seeds/02_dev_upcoming_match.sql",
+]
 
 [db.network_restrictions]
 # Enable management of network restrictions.

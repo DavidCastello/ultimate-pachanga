@@ -99,7 +99,7 @@ select throws_ok(
 with attempted as (
   update public.players
   set first_name = 'Renamed'
-  where player_code = 'PLR-A7K2'
+  where player_code = 'JORDI'
   returning 1
 )
 select is(
@@ -111,7 +111,7 @@ select is(
 with attempted as (
   update public.players
   set is_active = false
-  where player_code = 'PLR-A7K2'
+  where player_code = 'JORDI'
   returning 1
 )
 select is(
@@ -121,15 +121,15 @@ select is(
 );
 
 select is(
-  (select first_name from public.players where player_code = 'PLR-A7K2'),
-  'David',
+  (select first_name from public.players where player_code = 'JORDI'),
+  'Giorgio',
   'the player is unchanged after the member attempts'
 );
 
 -- Nobody is granted DELETE on players: history must stay resolvable, so the
 -- application deactivates instead.
 select throws_ok(
-  $$delete from public.players where player_code = 'PLR-A7K2'$$,
+  $$delete from public.players where player_code = 'JORDI'$$,
   '42501',
   null,
   'a member cannot delete a player'
