@@ -39,6 +39,12 @@ interface PlayerCardProps {
   metrics: readonly LeagueMetricRow[]
   /** Renders the whole card as a link to the player's detail page. */
   linkTo?: string
+  /**
+   * Compact form for the pitch view, where seven cards share one pitch. Keeps
+   * the rating, tier and face — what identifies a player at a glance — and drops
+   * the metric grid and footer, which are unreadable at that size anyway.
+   */
+  compact?: boolean
   className?: string
 }
 
@@ -46,12 +52,59 @@ export function PlayerCard({
   player,
   metrics,
   linkTo,
+  compact,
   className,
 }: PlayerCardProps) {
   const tier = toCardTier(player.cardRating)
   const avatarUrl = getAvatarUrl(player.avatarPath)
 
-  const card = (
+  const card = compact ? (
+    <article
+      data-testid="player-card"
+      data-tier={tier}
+      data-compact="true"
+      className={cn(
+        'relative flex w-full flex-col items-center gap-0.5 overflow-hidden rounded-lg border bg-card/90 bg-gradient-to-br px-1 pt-1 pb-1.5 text-center shadow-lg backdrop-blur-sm',
+        TIER_STYLES[tier],
+        !player.isActive && 'opacity-60 saturate-50',
+        className,
+      )}
+    >
+      <Avatar className="size-9 border border-background/50">
+        {avatarUrl ? (
+          <AvatarImage
+            src={avatarUrl}
+            alt=""
+            className="object-cover"
+            loading="lazy"
+          />
+        ) : null}
+        <AvatarFallback className="bg-background/70 text-[0.625rem] font-bold">
+          {toInitials(player.firstName, player.lastName, player.displayName)}
+        </AvatarFallback>
+      </Avatar>
+
+      <span
+        className={cn(
+          'numeric text-sm leading-none font-black',
+          TIER_ACCENTS[tier],
+        )}
+      >
+        {player.cardRating}
+      </span>
+
+      <span
+        className="w-full truncate text-[0.6875rem] leading-tight font-semibold"
+        title={player.displayName}
+      >
+        {player.displayName}
+      </span>
+
+      <span className="text-[0.5625rem] leading-none font-bold tracking-wider text-muted-foreground">
+        {player.preferredPosition}
+      </span>
+    </article>
+  ) : (
     <article
       data-testid="player-card"
       data-tier={tier}

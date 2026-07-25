@@ -122,6 +122,39 @@ where m.league_id = app.initial_league_id()
   and p.league_id = app.initial_league_id()
   and p.player_code not in ('PLR-Q2X3', 'PLR-R6Y7');
 
+-- Place each squad in its formation, so the pitch view has something to show
+-- straight after a reset. Goalkeepers take slot 0; the rest fill 1..6 in a
+-- stable order.
+--
+-- Migration 007 contains the same backfill for databases that already held
+-- squads, but seeding runs after migrations, so dev data has to do it here.
+with ranked as (
+  select
+    mp.id,
+    row_number() over (
+      partition by mp.match_id, mp.team_side
+      order by (p.preferred_position <> 'GK'), p.player_code
+    ) - 1 as slot
+  from public.match_players mp
+  join public.players p on p.id = mp.player_id
+  where mp.team_side in ('home', 'away')
+)
+update public.match_players mp
+set pitch_slot = ranked.slot
+from ranked
+where ranked.id = mp.id
+  and ranked.slot <= 6;
+
+-- One player left on the bench in the upcoming match, so the interface has a
+-- non-empty bench to render during development.
+update public.match_players mp
+set pitch_slot = null
+where mp.match_id = '33333333-3333-4333-8333-000000000003'
+  and mp.player_id = (
+    select p.id from public.players p
+    where p.player_code = 'PLR-G6J3'
+  );
+
 -- ---------------------------------------------------------------------------
 -- Scores
 --

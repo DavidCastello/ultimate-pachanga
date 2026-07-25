@@ -3,21 +3,10 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MatchForm } from '@/features/matches/MatchForm'
 import { renderWithProviders } from '@/test/render'
+import { buildMatch } from '@/test/factories'
 import type { MatchRow } from '@/types/domain'
 
-const EXISTING_MATCH: MatchRow = {
-  id: 'match-1',
-  league_id: 'league-1',
-  title: 'Jornada 3',
-  location: 'Polideportivo Roco',
-  played_at: '2026-08-01T18:00:00.000Z',
-  home_team_name: 'Los Cracks',
-  away_team_name: 'Los Pachangueros',
-  status: 'scheduled',
-  results_imported_at: null,
-  created_at: '2026-07-01T00:00:00.000Z',
-  updated_at: '2026-07-01T00:00:00.000Z',
-}
+const EXISTING_MATCH = buildMatch()
 
 function renderForm(match?: MatchRow) {
   const onSubmit = vi.fn().mockResolvedValue(undefined)

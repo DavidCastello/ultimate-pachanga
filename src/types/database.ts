@@ -178,6 +178,7 @@ export type Database = {
           created_at: string
           id: string
           match_id: string
+          pitch_slot: number | null
           player_id: string
           team_side: Database["public"]["Enums"]["team_side"]
         }
@@ -186,6 +187,7 @@ export type Database = {
           created_at?: string
           id?: string
           match_id: string
+          pitch_slot?: number | null
           player_id: string
           team_side?: Database["public"]["Enums"]["team_side"]
         }
@@ -194,6 +196,7 @@ export type Database = {
           created_at?: string
           id?: string
           match_id?: string
+          pitch_slot?: number | null
           player_id?: string
           team_side?: Database["public"]["Enums"]["team_side"]
         }
@@ -237,8 +240,10 @@ export type Database = {
       }
       matches: {
         Row: {
+          away_formation: Database["public"]["Enums"]["pitch_formation"]
           away_team_name: string
           created_at: string
+          home_formation: Database["public"]["Enums"]["pitch_formation"]
           home_team_name: string
           id: string
           league_id: string
@@ -250,8 +255,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          away_formation?: Database["public"]["Enums"]["pitch_formation"]
           away_team_name: string
           created_at?: string
+          home_formation?: Database["public"]["Enums"]["pitch_formation"]
           home_team_name: string
           id?: string
           league_id: string
@@ -263,8 +270,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          away_formation?: Database["public"]["Enums"]["pitch_formation"]
           away_team_name?: string
           created_at?: string
+          home_formation?: Database["public"]["Enums"]["pitch_formation"]
           home_team_name?: string
           id?: string
           league_id?: string
@@ -556,6 +565,7 @@ export type Database = {
       league_status: "active" | "inactive"
       match_status: "draft" | "scheduled" | "played" | "scored" | "cancelled"
       member_role: "admin" | "member"
+      pitch_formation: "2-3-1" | "3-3" | "3-2-1" | "1-3-2"
       player_position:
         | "GK"
         | "CB"
@@ -704,6 +714,7 @@ export const Constants = {
       league_status: ["active", "inactive"],
       match_status: ["draft", "scheduled", "played", "scored", "cancelled"],
       member_role: ["admin", "member"],
+      pitch_formation: ["2-3-1", "3-3", "3-2-1", "1-3-2"],
       player_position: [
         "GK",
         "CB",

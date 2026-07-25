@@ -1,4 +1,4 @@
-import type { LeagueMetricRow, PlayerCardData } from '@/types/domain'
+import type { MatchRow, LeagueMetricRow, PlayerCardData } from '@/types/domain'
 
 /**
  * Test fixtures. Overrides are shallow-merged so a test states only the fields
@@ -69,6 +69,25 @@ export function buildPlayerCard(
     metricAverages: { attack: 6.5, defence: 8.5, tactics: 8.5, physical: 7 },
     attributeCounts: { zamora: 1, mvp: 2 },
     attributeTotal: 3,
+    ...overrides,
+  }
+}
+
+export function buildMatch(overrides: Partial<MatchRow> = {}): MatchRow {
+  return {
+    id: 'match-1',
+    league_id: TEST_LEAGUE_ID,
+    title: 'Jornada 3',
+    location: 'Polideportivo Roco',
+    played_at: '2026-08-01T18:00:00.000Z',
+    home_team_name: 'Los Cracks',
+    away_team_name: 'Los Pachangueros',
+    status: 'scheduled',
+    home_formation: '2-3-1',
+    away_formation: '2-3-1',
+    results_imported_at: null,
+    created_at: '2026-07-01T00:00:00.000Z',
+    updated_at: '2026-07-01T00:00:00.000Z',
     ...overrides,
   }
 }

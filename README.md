@@ -22,8 +22,9 @@ the rankings — with league settings and member management for administrators.
 | 3     | Matches and CSV results import                       | ✅ Done |
 | 4     | Rankings, dashboard, admin settings, members         | ✅ Done |
 
-Tests: 123 frontend (Vitest), 106 database (pgTAP). Verified in Chrome at 375 px:
-every page renders and nothing scrolls horizontally.
+Tests: 181 frontend (Vitest), 119 database (pgTAP). Verified in Chrome at both
+desktop and 375 px: every page renders, nothing scrolls horizontally, and a real
+pointer drag rearranges a line-up and persists it.
 
 Not yet done: deployment. The app runs against a local Supabase stack; pushing
 it to Supabase Cloud and Cloudflare Pages is the remaining step.
@@ -201,6 +202,37 @@ scores, and unknown or repeated attributes are all refused.
 
 Templates are written with a UTF-8 byte order mark so Excel on Windows does not
 mangle accented names.
+
+## Line-ups on the pitch
+
+Every match shows both squads on a pitch, whatever its status — before kickoff
+it is the plan, afterwards the record of who played where. Each side gets its
+own pitch, drawn with their goal at the bottom so the attack points upwards, and
+players appear as the same football cards used everywhere else.
+
+Fútbol 7 means seven a side: the goalkeeper is always at the foot of the pitch,
+and the formation describes the six outfielders.
+
+| Formation | Shape                                                         |
+| --------- | ------------------------------------------------------------- |
+| `2-3-1`   | Default: two at the back, three across midfield, one up front |
+| `3-3`     | Two lines of three                                            |
+| `3-2-1`   | Three, two, one                                               |
+| `1-3-2`   | A sweeper, three across, two up front                         |
+
+Each team's formation is chosen independently.
+
+Administrators can rearrange a line-up by **dragging one player onto another**,
+which swaps them. Tapping one and then the other does the same thing and is
+easier on a phone; keyboard users get the same via Enter, with Escape to cancel.
+Swaps work across both teams and the bench, so moving someone between sides or
+on and off is one gesture. Members see the same pitch, read-only.
+
+Positions are stored per match, so an arrangement survives a reload. The
+database enforces one player per position per side.
+
+Dragging uses Pointer Events rather than HTML5 drag-and-drop, which does not
+fire on touch devices at all.
 
 ## Roles
 

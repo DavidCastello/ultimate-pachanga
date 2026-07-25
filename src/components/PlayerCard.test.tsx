@@ -133,4 +133,65 @@ describe('PlayerCard', () => {
 
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
   })
+
+  describe('compact variant, used on the pitch', () => {
+    it('keeps what identifies a player', () => {
+      renderWithProviders(
+        <PlayerCard
+          player={buildPlayerCard()}
+          metrics={TEST_METRICS}
+          compact
+        />,
+      )
+
+      expect(screen.getByText('96')).toBeInTheDocument()
+      expect(screen.getByText('David Castelló')).toBeInTheDocument()
+      expect(screen.getByText('CM')).toBeInTheDocument()
+      expect(screen.getByText('DC')).toBeInTheDocument()
+    })
+
+    // Seven of these share one pitch; the metric grid and market value are
+    // unreadable at that size and would only crowd it.
+    it('drops the metric grid and the footer', () => {
+      renderWithProviders(
+        <PlayerCard
+          player={buildPlayerCard()}
+          metrics={TEST_METRICS}
+          compact
+        />,
+      )
+
+      expect(screen.queryByText('Ata')).not.toBeInTheDocument()
+      expect(screen.queryByText('£9,63 M')).not.toBeInTheDocument()
+      expect(screen.queryByText(/partidos/)).not.toBeInTheDocument()
+    })
+
+    it('is marked as compact and keeps its tier', () => {
+      renderWithProviders(
+        <PlayerCard
+          player={buildPlayerCard()}
+          metrics={TEST_METRICS}
+          compact
+        />,
+      )
+
+      const card = screen.getByTestId('player-card')
+      expect(card).toHaveAttribute('data-compact', 'true')
+      expect(card).toHaveAttribute('data-tier', 'gold')
+    })
+
+    it('still dims an inactive player', () => {
+      renderWithProviders(
+        <PlayerCard
+          player={buildPlayerCard({ isActive: false })}
+          metrics={TEST_METRICS}
+          compact
+        />,
+      )
+
+      expect(screen.getByTestId('player-card').className).toContain(
+        'opacity-60',
+      )
+    })
+  })
 })

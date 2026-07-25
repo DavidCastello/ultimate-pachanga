@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import type { Formation } from '@/lib/formations'
 import type { Json } from '@/types/database'
 import type {
   AttendanceStatus,
@@ -47,6 +48,8 @@ export interface SquadMember {
   preferredPosition: PlayerPosition
   teamSide: TeamSide
   attendanceStatus: AttendanceStatus
+  /** Null when the player is convocated but not placed on the pitch. */
+  pitchSlot: number | null
 }
 
 export async function fetchSquad(matchId: string): Promise<SquadMember[]> {
@@ -55,6 +58,7 @@ export async function fetchSquad(matchId: string): Promise<SquadMember[]> {
     .select(
       `team_side,
        attendance_status,
+       pitch_slot,
        players!inner (
          id, player_code, first_name, last_name, nickname, preferred_position
        )`,
@@ -75,6 +79,7 @@ export async function fetchSquad(matchId: string): Promise<SquadMember[]> {
       preferredPosition: row.players.preferred_position,
       teamSide: row.team_side,
       attendanceStatus: row.attendance_status,
+      pitchSlot: row.pitch_slot,
     }))
     .sort((left, right) =>
       left.displayName.localeCompare(right.displayName, 'es'),
@@ -245,6 +250,70 @@ export async function saveSquad(
   )
 
   if (upsertError) throw upsertError
+}
+
+/**
+ * Moves players between slots, sides and the bench.
+ *
+ * A swap only ever touches the players involved, so this takes just those rows
+ * rather than rewriting the whole squad.
+ *
+ * The slots are cleared before being reassigned: `(match_id, team_side,
+ * pitch_slot)` is unique, so writing A into B's slot while B still holds it
+ * would collide. Two statements rather than one transaction is acceptable here
+ * because the worst case is a lineup that needs rearranging again, not a
+ * corrupted result.
+ */
+export async function saveLineup(
+  matchId: string,
+  changes: readonly LineupChange[],
+): Promise<void> {
+  if (changes.length === 0) return
+
+  const playerIds = changes.map((change) => change.playerId)
+
+  const { error: clearError } = await supabase
+    .from('match_players')
+    .update({ pitch_slot: null })
+    .eq('match_id', matchId)
+    .in('player_id', playerIds)
+
+  if (clearError) throw clearError
+
+  // Sequential rather than parallel: concurrent writes to the same unique index
+  // can deadlock, and seven rows is not worth the risk.
+  for (const change of changes) {
+    const { error } = await supabase
+      .from('match_players')
+      .update({ team_side: change.teamSide, pitch_slot: change.pitchSlot })
+      .eq('match_id', matchId)
+      .eq('player_id', change.playerId)
+
+    if (error) throw error
+  }
+}
+
+export interface LineupChange {
+  playerId: string
+  teamSide: TeamSide
+  pitchSlot: number | null
+}
+
+export async function saveFormation(
+  matchId: string,
+  side: 'home' | 'away',
+  formation: Formation,
+): Promise<void> {
+  const { error } = await supabase
+    .from('matches')
+    .update(
+      side === 'home'
+        ? { home_formation: formation }
+        : { away_formation: formation },
+    )
+    .eq('id', matchId)
+
+  if (error) throw error
 }
 
 export interface ImportRow {

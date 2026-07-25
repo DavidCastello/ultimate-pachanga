@@ -31,6 +31,7 @@ import {
   SquadSelector,
   type SquadDraft,
 } from '@/features/matches/SquadSelector'
+import { PitchLineups, type LineupEntry } from '@/features/matches/PitchLineups'
 import { CsvUploadDialog } from '@/features/results/CsvUploadDialog'
 import {
   fetchMatch,
@@ -38,11 +39,15 @@ import {
   fetchSquad,
   importMatchScores,
   matchKeys,
+  saveFormation,
+  saveLineup,
   saveSquad,
   updateMatch,
   type ImportRow,
+  type LineupChange,
   type MatchInput,
 } from '@/features/matches/api'
+import { DEFAULT_FORMATION, type Formation } from '@/lib/formations'
 import { fetchPlayerCards, playerKeys } from '@/features/players/api'
 import {
   useIsAdmin,
@@ -93,9 +98,11 @@ export function MatchDetailPage() {
     queryFn: () => fetchMatchScores(matchId),
   })
 
+  // Needed by every viewer now, not just administrators: the pitch renders
+  // player cards, which come from this view rather than from the squad query.
   const { data: players = [] } = useQuery({
     queryKey: playerKeys.cards(membership?.leagueId ?? ''),
-    enabled: Boolean(membership) && isAdmin,
+    enabled: Boolean(membership),
     queryFn: () => fetchPlayerCards(membership!.leagueId),
   })
 
@@ -105,6 +112,31 @@ export function MatchDetailPage() {
     () => new Set(scores.map((score) => score.playerId)),
     [scores],
   )
+
+  /**
+   * The squad joined to the card data the pitch renders.
+   *
+   * A convocated player with no matching card is skipped rather than rendered
+   * blank — that can only happen if the two queries are momentarily out of step
+   * after a squad change.
+   */
+  const lineupEntries = useMemo<LineupEntry[]>(() => {
+    const cardsById = new Map(players.map((player) => [player.id, player]))
+
+    return squad
+      .map((member) => {
+        const player = cardsById.get(member.playerId)
+        if (!player) return null
+
+        return {
+          playerId: member.playerId,
+          teamSide: member.teamSide,
+          pitchSlot: member.pitchSlot,
+          player,
+        }
+      })
+      .filter((entry): entry is LineupEntry => entry !== null)
+  }, [squad, players])
 
   const squadByCode = useMemo(
     () =>
@@ -154,6 +186,38 @@ export function MatchDetailPage() {
     },
     onError: (error) => {
       toast.error(toErrorMessage(error, 'No se pudo guardar la convocatoria'))
+    },
+  })
+
+  const persistLineup = useMutation({
+    mutationFn: (changes: LineupChange[]) => saveLineup(matchId, changes),
+    onSuccess: async () => {
+      // Only the squad is affected; scores and player cards are untouched by a
+      // rearrangement, so this refetches less than invalidateMatch would.
+      await queryClient.invalidateQueries({
+        queryKey: matchKeys.squad(matchId),
+      })
+    },
+    onError: (error) => {
+      toast.error(toErrorMessage(error, 'No se pudo guardar la alineación'))
+    },
+  })
+
+  const persistFormation = useMutation({
+    mutationFn: ({
+      side,
+      formation,
+    }: {
+      side: 'home' | 'away'
+      formation: Formation
+    }) => saveFormation(matchId, side, formation),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: matchKeys.detail(matchId),
+      })
+    },
+    onError: (error) => {
+      toast.error(toErrorMessage(error, 'No se pudo cambiar la formación'))
     },
   })
 
@@ -362,6 +426,43 @@ export function MatchDetailPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2>Alineaciones</h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isSquadPending ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Skeleton className="aspect-[1000/1250] rounded-xl" />
+              <Skeleton className="aspect-[1000/1250] rounded-xl" />
+            </div>
+          ) : squad.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title="Nadie convocado todavía"
+              description="Selecciona la convocatoria y los jugadores aparecerán sobre el campo."
+              className="border-0 py-6"
+            />
+          ) : (
+            <PitchLineups
+              entries={lineupEntries}
+              metrics={metrics}
+              homeTeamName={match.home_team_name}
+              awayTeamName={match.away_team_name}
+              homeFormation={match.home_formation ?? DEFAULT_FORMATION}
+              awayFormation={match.away_formation ?? DEFAULT_FORMATION}
+              interactive={isAdmin}
+              onFormationChange={(side, formation) =>
+                persistFormation.mutate({ side, formation })
+              }
+              onLineupChange={(changes) => persistLineup.mutate(changes)}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
