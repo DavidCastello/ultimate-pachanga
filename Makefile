@@ -19,6 +19,7 @@ LOCAL_ENV := .env.local
 PROD_DIR := supabase/production
 PROD_SCRIPTS := 01_roster 02_fixtures 03_results
 LOCAL_DB_CONTAINER := supabase_db_ultimate-pachanga
+LOCAL_KONG_CONTAINER := supabase_kong_ultimate-pachanga
 
 .DEFAULT_GOAL := help
 
@@ -108,8 +109,15 @@ db-stop: ## Stop it
 db-status: ## Print local URLs and keys
 	npm run db:status
 
+# The gateway restart is not optional housekeeping. `supabase db reset` replaces
+# the auth container but leaves Kong routing to the old one's address, so every
+# sign-in afterwards fails with a 502 and nothing in the app explains why. Doing
+# it here means nobody has to remember.
 db-reset: ## Recreate the database from migrations + the seed files
 	npm run db:reset
+	@docker restart $(LOCAL_KONG_CONTAINER) >/dev/null \
+	  && echo "Gateway restarted — sign-in works again." \
+	  || echo "Could not restart $(LOCAL_KONG_CONTAINER); sign-in may 502."
 
 db-test: ## Run the pgTAP tests
 	npm run db:test

@@ -159,16 +159,21 @@ Re-run `make db-types` after any schema change.
 The `prod-` targets are one-off data loads, not part of any routine; see
 [Loading the real league](#loading-the-real-league).
 
-### Sign-in stops working after `db:reset`
+### Signing in locally
 
-`supabase db reset` restarts the auth container but not the API gateway, which
-goes on routing to the old container's address. Sign-up and sign-in then fail
-with "An invalid response was received from the upstream server". Restart the
-gateway:
+The database is seeded with the owner's account, so there is nothing to register:
 
-```bash
-docker restart supabase_kong_ultimate-pachanga
+```text
+dcastellotejera@gmail.com  /  pachanga
 ```
+
+It arrives as an administrator with no player claimed, which is deliberate — the
+join screen is the first thing you see, and it is part of the app.
+
+> `supabase db reset` replaces the auth container but leaves the API gateway
+> routing to the old one, so sign-in answers **502 Bad Gateway** afterwards.
+> `make db-reset` restarts the gateway for you; `npm run db:reset` does not, and
+> needs `docker restart supabase_kong_ultimate-pachanga` after it.
 
 ## Repository layout
 
