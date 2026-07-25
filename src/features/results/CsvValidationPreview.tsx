@@ -101,6 +101,8 @@ export function CsvValidationPreview({
                       {metric.label}
                     </TableHead>
                   ))}
+                  <TableHead className="text-right">Goles</TableHead>
+                  <TableHead className="text-right">Victoria</TableHead>
                   <TableHead className="text-right">Base</TableHead>
                   <TableHead>Atributos</TableHead>
                   <TableHead className="text-right">Final</TableHead>
@@ -124,15 +126,28 @@ export function CsvValidationPreview({
                       </TableCell>
                     ))}
                     <TableCell className="numeric text-right">
+                      {row.goals}
+                    </TableCell>
+                    <TableCell className="numeric text-right">
+                      {formatScore(row.victory)}
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        ({formatAttributePoints(row.victoryPoints)})
+                      </span>
+                    </TableCell>
+                    <TableCell className="numeric text-right">
                       {formatScore(row.baseScore)}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {row.attributeCodes.map((code, index) => (
+                          // The one place points belong on a chip: this
+                          // screen exists so an administrator can check the
+                          // arithmetic before committing to it.
                           <AttributeBadge
                             key={code}
                             label={row.attributeLabels[index]}
                             points={pointsFor(code)}
+                            showPoints
                           />
                         ))}
                         {row.attributePoints !== 0 ? (

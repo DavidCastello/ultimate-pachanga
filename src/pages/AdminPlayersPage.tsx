@@ -211,11 +211,18 @@ export function AdminPlayersPage() {
                       {player.matchesPlayed}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={player.isActive ? 'default' : 'secondary'}
-                      >
-                        {player.isActive ? 'Activo' : 'Inactivo'}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge
+                          variant={player.isActive ? 'default' : 'secondary'}
+                        >
+                          {player.isActive ? 'Activo' : 'Inactivo'}
+                        </Badge>
+                        {/* Unclaimed players are the ones still offered to
+                            whoever registers next. */}
+                        {player.userId ? null : (
+                          <Badge variant="outline">Sin cuenta</Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">

@@ -1,15 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  ArrowLeft,
-  CalendarDays,
-  Download,
-  MapPin,
-  Pencil,
-  Upload,
-  Users,
-} from 'lucide-react'
+import { ArrowLeft, Download, Pencil, Upload, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,7 +17,7 @@ import {
 import { AdminOnly } from '@/components/AdminOnly'
 import { AttributeBadge } from '@/components/AttributeBadge'
 import { EmptyState } from '@/components/EmptyState'
-import { MatchStatusBadge } from '@/components/MatchStatusBadge'
+import { MatchHero } from '@/components/MatchHero'
 import { MatchForm } from '@/features/matches/MatchForm'
 import {
   SquadSelector,
@@ -56,15 +48,23 @@ import {
   useMembership,
 } from '@/features/league/useLeague'
 import { buildScoreTemplate, downloadCsv, toTemplateFilename } from '@/lib/csv'
-import {
-  formatMatchDateTime,
-  formatMatchRelative,
-  formatPosition,
-  formatScore,
-} from '@/lib/formatting'
+import { formatPosition, formatScore, formatVictories } from '@/lib/formatting'
+import type { MatchRow, TeamSide } from '@/types/domain'
 
 function toErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
+}
+
+/**
+ * The team a player turned out for, by its real name rather than "home".
+ *
+ * A squad member with no side is possible while an administrator is still
+ * arranging the teams; once a match is scored it should not happen.
+ */
+function toTeamName(side: TeamSide, match: MatchRow | undefined): string {
+  if (side === 'home') return match?.home_team_name ?? 'Local'
+  if (side === 'away') return match?.away_team_name ?? 'Visitante'
+  return 'Sin equipo'
 }
 
 export function MatchDetailPage() {
@@ -105,6 +105,25 @@ export function MatchDetailPage() {
     enabled: Boolean(membership),
     queryFn: () => fetchPlayerCards(membership!.leagueId),
   })
+
+  /**
+   * Which side each player was on.
+   *
+   * team_side lives on match_players and the scores come from
+   * player_match_scores. The two tables have no foreign key between them — both
+   * point at players and matches instead — so PostgREST cannot join them and
+   * the pairing happens here, off two queries the page already runs.
+   */
+  const teamNameByPlayerId = useMemo(
+    () =>
+      new Map(
+        squad.map((member) => [
+          member.playerId,
+          toTeamName(member.teamSide, match),
+        ]),
+      ),
+    [squad, match],
+  )
 
   // A player with a score must stay in the squad; removing them would orphan
   // the result.
@@ -312,32 +331,7 @@ export function MatchDetailPage() {
         </Link>
       </Button>
 
-      <header className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold">{match.title}</h1>
-          <MatchStatusBadge status={match.status} />
-        </div>
-        <p className="font-medium">
-          {match.home_team_name}{' '}
-          <span className="text-muted-foreground">vs</span>{' '}
-          {match.away_team_name}
-        </p>
-        <dl className="flex flex-col gap-1 text-sm text-muted-foreground sm:flex-row sm:gap-4">
-          <div className="flex items-center gap-1.5">
-            <dt className="sr-only">Fecha</dt>
-            <CalendarDays className="size-4 shrink-0" aria-hidden="true" />
-            <dd>
-              {formatMatchDateTime(match.played_at)} ·{' '}
-              {formatMatchRelative(match.played_at)}
-            </dd>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <dt className="sr-only">Lugar</dt>
-            <MapPin className="size-4 shrink-0" aria-hidden="true" />
-            <dd>{match.location}</dd>
-          </div>
-        </dl>
-      </header>
+      <MatchHero match={match} />
 
       <AdminOnly>
         <div className="flex flex-wrap gap-2">
@@ -534,11 +528,14 @@ export function MatchDetailPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Jugador</TableHead>
+                    <TableHead>Equipo</TableHead>
                     {metrics.map((metric) => (
                       <TableHead key={metric.code} className="text-right">
                         {metric.label}
                       </TableHead>
                     ))}
+                    <TableHead className="text-right">Goles</TableHead>
+                    <TableHead className="text-right">Victoria</TableHead>
                     <TableHead className="text-right">Base</TableHead>
                     <TableHead>Atributos</TableHead>
                     <TableHead className="text-right">Final</TableHead>
@@ -555,6 +552,9 @@ export function MatchDetailPage() {
                           {score.displayName}
                         </Link>
                       </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {teamNameByPlayerId.get(score.playerId) ?? '—'}
+                      </TableCell>
                       {metrics.map((metric) => (
                         <TableCell
                           key={metric.code}
@@ -563,6 +563,12 @@ export function MatchDetailPage() {
                           {formatScore(score.metricScores[metric.code] ?? null)}
                         </TableCell>
                       ))}
+                      <TableCell className="numeric text-right">
+                        {score.goals}
+                      </TableCell>
+                      <TableCell className="numeric text-right">
+                        {formatVictories(score.victory)}
+                      </TableCell>
                       <TableCell className="numeric text-right">
                         {formatScore(score.baseScore)}
                       </TableCell>

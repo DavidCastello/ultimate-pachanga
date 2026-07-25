@@ -25,7 +25,13 @@ import {
   useLeagueAttributes,
   useLeagueMetrics,
 } from '@/features/league/useLeague'
-import { formatMatchDate, formatPosition, formatScore } from '@/lib/formatting'
+import {
+  formatMatchDate,
+  formatPosition,
+  formatScore,
+  formatVictories,
+  formatWinRate,
+} from '@/lib/formatting'
 
 function SummaryRow({
   label,
@@ -131,6 +137,18 @@ export function PlayerDetailPage() {
                 <SummaryRow label="Partidos jugados">
                   <span className="numeric">{player.matchesPlayed}</span>
                 </SummaryRow>
+                <SummaryRow label="Victorias">
+                  <span className="numeric">
+                    {formatWinRate(player.totalVictories, player.matchesPlayed)}
+                    <span className="ml-2 font-normal text-muted-foreground">
+                      {formatVictories(player.totalVictories)}/
+                      {player.matchesPlayed}
+                    </span>
+                  </span>
+                </SummaryRow>
+                <SummaryRow label="Goles">
+                  <span className="numeric">{player.totalGoals}</span>
+                </SummaryRow>
                 <SummaryRow label="Media histórica">
                   <span className="numeric">
                     {formatScore(player.careerAverage)}
@@ -224,6 +242,8 @@ export function PlayerDetailPage() {
                         {metric.label}
                       </TableHead>
                     ))}
+                    <TableHead className="text-right">Goles</TableHead>
+                    <TableHead className="text-right">Victoria</TableHead>
                     <TableHead className="text-right">Base</TableHead>
                     <TableHead>Atributos</TableHead>
                     <TableHead className="text-right">Final</TableHead>
@@ -246,6 +266,12 @@ export function PlayerDetailPage() {
                           {formatScore(entry.metricScores[metric.code] ?? null)}
                         </TableCell>
                       ))}
+                      <TableCell className="numeric text-right">
+                        {entry.goals}
+                      </TableCell>
+                      <TableCell className="numeric text-right">
+                        {formatVictories(entry.victory)}
+                      </TableCell>
                       <TableCell className="numeric text-right">
                         {formatScore(entry.baseScore)}
                       </TableCell>

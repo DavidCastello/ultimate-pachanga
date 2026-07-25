@@ -50,6 +50,8 @@ export interface PlayerCardData {
   preferredPosition: PlayerPosition
   avatarPath: string | null
   isActive: boolean
+  /** The account that plays as this player, or null while unclaimed. */
+  userId: string | null
   matchesPlayed: number
   /** Null until the player has been scored at least once. */
   careerAverage: number | null
@@ -64,6 +66,9 @@ export interface PlayerCardData {
   /** Keyed by attribute code, how many times the player has received it. */
   attributeCounts: Record<string, number>
   attributeTotal: number
+  totalGoals: number
+  /** Victories accumulated. A decimal, because a draw is half a win. */
+  totalVictories: number
 }
 
 type PlayerCardRow = Database['public']['Views']['player_cards']['Row']
@@ -102,6 +107,7 @@ export function toPlayerCardData(row: PlayerCardRow): PlayerCardData | null {
     preferredPosition: row.preferred_position,
     avatarPath: row.avatar_path,
     isActive: row.is_active ?? true,
+    userId: row.user_id,
     matchesPlayed: row.matches_played ?? 0,
     careerAverage: row.career_average,
     latestScore: row.latest_score,
@@ -112,5 +118,7 @@ export function toPlayerCardData(row: PlayerCardRow): PlayerCardData | null {
     metricAverages: toNumberRecord(row.metric_averages),
     attributeCounts: toNumberRecord(row.attribute_counts),
     attributeTotal: row.attribute_total ?? 0,
+    totalGoals: row.total_goals ?? 0,
+    totalVictories: Number(row.total_victories ?? 0),
   }
 }

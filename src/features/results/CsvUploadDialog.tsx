@@ -105,6 +105,8 @@ function UploadDialogBody({
           player_code: row.playerCode,
           metric_scores: row.metricScores,
           attribute_codes: row.attributeCodes,
+          goals: row.goals,
+          victory: row.victory,
         })),
       )
       onOpenChange(false)

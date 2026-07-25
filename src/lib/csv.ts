@@ -1,5 +1,9 @@
 import Papa from 'papaparse'
-import { calculateBaseScore } from '@/lib/scoring'
+import {
+  calculateScoreBreakdown,
+  isGoalCountValid,
+  isVictoryShareValid,
+} from '@/lib/scoring'
 import type { LeagueAttributeRow, LeagueMetricRow } from '@/types/domain'
 
 /**
@@ -16,6 +20,8 @@ import type { LeagueAttributeRow, LeagueMetricRow } from '@/types/domain'
 export const CSV_PLAYER_CODE_HEADER = 'CodigoJugador'
 export const CSV_FIRST_NAME_HEADER = 'Nombre'
 export const CSV_LAST_NAME_HEADER = 'Apellidos'
+export const CSV_GOALS_HEADER = 'Goles'
+export const CSV_VICTORY_HEADER = 'Victoria'
 export const CSV_ATTRIBUTES_HEADER = 'Atributos'
 
 /** Separates several attributes in one cell, e.g. `MVP|Puskas`. */
@@ -89,6 +95,8 @@ export function buildScoreTemplate(
     CSV_FIRST_NAME_HEADER,
     CSV_LAST_NAME_HEADER,
     ...metrics.map((metric) => metric.label),
+    CSV_GOALS_HEADER,
+    CSV_VICTORY_HEADER,
     CSV_ATTRIBUTES_HEADER,
   ]
 
@@ -97,6 +105,8 @@ export function buildScoreTemplate(
     player.firstName,
     player.lastName,
     ...metrics.map(() => ''),
+    '',
+    '',
     '',
   ])
 
@@ -110,8 +120,12 @@ export interface ParsedScoreRow {
   metricScores: Record<string, number>
   attributeCodes: string[]
   attributeLabels: string[]
+  goals: number
+  /** 1 won, 0 lost, 0.5 drawn. */
+  victory: number
   baseScore: number
   attributePoints: number
+  victoryPoints: number
   finalScore: number
 }
 
@@ -204,6 +218,23 @@ export function parseScoreCsv(
     }
   }
 
+  const goalsHeader = headers.find(
+    (header) => normalizeKey(header) === normalizeKey(CSV_GOALS_HEADER),
+  )
+  if (!goalsHeader) {
+    fileProblems.push(`Falta la columna «${CSV_GOALS_HEADER}»`)
+  }
+
+  // Reported as a missing column rather than defaulted, because a victory is
+  // worth two points: silently reading a template that predates the column as
+  // "everybody lost" would quietly rewrite the table.
+  const victoryHeader = headers.find(
+    (header) => normalizeKey(header) === normalizeKey(CSV_VICTORY_HEADER),
+  )
+  if (!victoryHeader) {
+    fileProblems.push(`Falta la columna «${CSV_VICTORY_HEADER}»`)
+  }
+
   const attributesHeader = headers.find(
     (header) => normalizeKey(header) === normalizeKey(CSV_ATTRIBUTES_HEADER),
   )
@@ -269,6 +300,35 @@ export function parseScoreCsv(
       metricScores[metric.code] = value
     }
 
+    // --- goals and victory ---
+    // A blank goals cell means none, which saves typing a zero on every line
+    // of a fourteen-player squad. A blank victory cell does not get the same
+    // treatment: there is no natural default between winning and losing.
+    let hasResultProblem = false
+
+    const rawGoals = (record[goalsHeader!] ?? '').trim()
+    const goals = rawGoals === '' ? 0 : parseScore(rawGoals)
+
+    if (goals === null || !isGoalCountValid(goals)) {
+      addProblem(`«${CSV_GOALS_HEADER}» debe ser un número entero de 0 o más`)
+      hasResultProblem = true
+    }
+
+    const victory = parseScore(record[victoryHeader!] ?? '')
+
+    if (victory === null) {
+      addProblem(
+        `«${CSV_VICTORY_HEADER}» está vacío; pon 1 si ganó, 0 si perdió ` +
+          'o 0,5 si empató',
+      )
+      hasResultProblem = true
+    } else if (!isVictoryShareValid(victory)) {
+      addProblem(
+        `«${CSV_VICTORY_HEADER}» es ${victory}; debe estar entre 0 y 1`,
+      )
+      hasResultProblem = true
+    }
+
     // --- attributes ---
     const attributeCodes: string[] = []
     const attributeLabels: string[] = []
@@ -302,16 +362,16 @@ export function parseScoreCsv(
       attributeLabels.push(attribute.label)
     }
 
-    if (hasMetricProblem || hasAttributeProblem) return
+    if (hasMetricProblem || hasAttributeProblem || hasResultProblem) return
 
     const awarded = attributeCodes.map((code) =>
       attributes.find((attribute) => attribute.code === code)!,
     )
-    const attributePoints = awarded.reduce(
-      (sum, attribute) => sum + attribute.points,
-      0,
+    const breakdown = calculateScoreBreakdown(
+      Object.values(metricScores),
+      awarded,
+      victory!,
     )
-    const baseScore = calculateBaseScore(Object.values(metricScores))
 
     rows.push({
       playerCode,
@@ -319,9 +379,9 @@ export function parseScoreCsv(
       metricScores,
       attributeCodes,
       attributeLabels,
-      baseScore,
-      attributePoints,
-      finalScore: baseScore + attributePoints,
+      goals: goals!,
+      victory: victory!,
+      ...breakdown,
     })
   })
 

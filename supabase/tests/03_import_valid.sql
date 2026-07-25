@@ -3,16 +3,16 @@
 --
 -- Checks the arithmetic against the worked example in the specification:
 --
---   attack 6, defence 9, tactics 8, physical 7  ->  base 7.5
+--   attack 6, defence 9, tactics 8, physical 7  ->  base 30
 --   Zamora                                      ->  +2
---                                               ->  final 9.5
+--   a win                                       ->  +2
+--                                               ->  final 34
 -- ============================================================================
 
 begin;
-select plan(12);
+select plan(16);
 
--- Cleared so the new-user trigger makes this account an administrator
--- regardless of who already exists in this database.
+-- Cleared so this file's memberships are the only ones in the database.
 delete from public.league_members;
 
 insert into auth.users (id, instance_id, aud, role, email)
@@ -21,6 +21,10 @@ values (
   '00000000-0000-0000-0000-000000000000',
   'authenticated', 'authenticated', 'admin@test.local'
 );
+
+-- Registering grants nothing since 008, so the membership is explicit.
+insert into public.league_members (league_id, user_id, role)
+values (app.initial_league_id(), '99999999-9999-4999-8999-00000000000a', 'admin');
 
 set local role authenticated;
 set local request.jwt.claims to
@@ -49,11 +53,13 @@ select is(
         {"player_code": "PLR-A7K2",
          "metric_scores": {"attack": 6, "defence": 9, "tactics": 8,
                            "physical": 7},
-         "attribute_codes": ["zamora"]},
+         "attribute_codes": ["zamora"],
+         "goals": 2, "victory": 1},
         {"player_code": "PLR-B9F1",
          "metric_scores": {"attack": 2, "defence": 8, "tactics": 7,
                            "physical": 6},
-         "attribute_codes": []},
+         "attribute_codes": [],
+         "goals": 0, "victory": 0.5},
         {"player_code": "PLR-K1Q2",
          "metric_scores": {"attack": 8, "defence": 8, "tactics": 9,
                            "physical": 7},
@@ -77,8 +83,8 @@ select is(
    join public.players p on p.id = s.player_id
    where s.match_id = '33333333-3333-4333-8333-000000000003'
      and p.player_code = 'PLR-A7K2'),
-  7.5::numeric(6, 3),
-  'base score is the mean of the active metrics'
+  30::numeric(6, 3),
+  'base score is the sum of the active metrics'
 );
 
 select is(
@@ -95,8 +101,8 @@ select is(
    join public.players p on p.id = s.player_id
    where s.match_id = '33333333-3333-4333-8333-000000000003'
      and p.player_code = 'PLR-A7K2'),
-  9.5::numeric(6, 3),
-  'final score is base score plus attribute points'
+  34::numeric(6, 3),
+  'final score is base, plus attribute points, plus two for the win'
 );
 
 select is(
@@ -108,14 +114,17 @@ select is(
   'multiple attributes accumulate'
 );
 
--- MVP +2 and Puskas +2 on a base of 8.0 exceeds the metric maximum. That is
--- intentional: final_score is not clamped.
+-- MVP +2 and Puskas +2 on a base of 32, with no victory recorded for this
+-- row: the two optional fields default to zero rather than failing the import.
+--
+-- final_score is deliberately unclamped, so nothing caps this at the metric
+-- total.
 select is(
   (select final_score from public.player_match_scores s
    join public.players p on p.id = s.player_id
    where s.match_id = '33333333-3333-4333-8333-000000000003'
      and p.player_code = 'PLR-K1Q2'),
-  12.0::numeric(6, 3),
+  36::numeric(6, 3),
   'final score may exceed the metric maximum'
 );
 
@@ -124,7 +133,7 @@ select is(
    join public.players p on p.id = s.player_id
    where s.match_id = '33333333-3333-4333-8333-000000000003'
      and p.player_code = 'PLR-L7R8'),
-  3.0::numeric(6, 3),
+  18::numeric(6, 3),
   'a negative attribute subtracts'
 );
 
@@ -154,6 +163,50 @@ select ok(
   (select results_imported_at is not null from public.matches
    where id = '33333333-3333-4333-8333-000000000003'),
   'a successful import stamps the import time'
+);
+
+-- ---------------------------------------------------------------------------
+-- Goals and victories
+-- ---------------------------------------------------------------------------
+
+select is(
+  (select goals from public.player_match_scores s
+   join public.players p on p.id = s.player_id
+   where s.match_id = '33333333-3333-4333-8333-000000000003'
+     and p.player_code = 'PLR-A7K2'),
+  2,
+  'goals are recorded as given'
+);
+
+-- Recorded, but absent from the arithmetic: two goals added nothing to the 34
+-- asserted above.
+select is(
+  (select victory from public.player_match_scores s
+   join public.players p on p.id = s.player_id
+   where s.match_id = '33333333-3333-4333-8333-000000000003'
+     and p.player_code = 'PLR-B9F1'),
+  0.5::numeric(3, 2),
+  'a draw is stored as half a victory'
+);
+
+-- 2+8+7+6 = 23, no attributes, half a win.
+select is(
+  (select final_score from public.player_match_scores s
+   join public.players p on p.id = s.player_id
+   where s.match_id = '33333333-3333-4333-8333-000000000003'
+     and p.player_code = 'PLR-B9F1'),
+  24::numeric(6, 3),
+  'a draw is worth one point'
+);
+
+-- The rows that sent neither field.
+select is(
+  (select victory from public.player_match_scores s
+   join public.players p on p.id = s.player_id
+   where s.match_id = '33333333-3333-4333-8333-000000000003'
+     and p.player_code = 'PLR-K1Q2'),
+  0::numeric(3, 2),
+  'an omitted victory is a defeat rather than an error'
 );
 
 select * from finish();

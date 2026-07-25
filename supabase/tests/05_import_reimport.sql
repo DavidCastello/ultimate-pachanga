@@ -8,8 +8,7 @@
 begin;
 select plan(10);
 
--- Cleared so the new-user trigger makes this account an administrator
--- regardless of who already exists in this database.
+-- Cleared so this file's memberships are the only ones in the database.
 delete from public.league_members;
 
 insert into auth.users (id, instance_id, aud, role, email)
@@ -18,6 +17,10 @@ values (
   '00000000-0000-0000-0000-000000000000',
   'authenticated', 'authenticated', 'admin@test.local'
 );
+
+-- Registering grants nothing since 008, so the membership is explicit.
+insert into public.league_members (league_id, user_id, role)
+values (app.initial_league_id(), '99999999-9999-4999-8999-00000000000a', 'admin');
 
 set local role authenticated;
 set local request.jwt.claims to
@@ -48,8 +51,8 @@ select is(
    join public.players p on p.id = s.player_id
    where s.match_id = '33333333-3333-4333-8333-000000000003'
      and p.player_code = 'PLR-A7K2'),
-  8.0::numeric(6, 3),
-  'the first import scores 6.0 base plus 2 for the MVP'
+  26::numeric(6, 3),
+  'the first import scores 24 base plus 2 for the MVP'
 );
 
 -- Correction: the scores were wrong and the MVP went to someone else.
@@ -77,7 +80,7 @@ select is(
    join public.players p on p.id = s.player_id
    where s.match_id = '33333333-3333-4333-8333-000000000003'
      and p.player_code = 'PLR-A7K2'),
-  8.0::numeric(6, 3),
+  32::numeric(6, 3),
   'the corrected base score replaces the original'
 );
 
@@ -95,8 +98,8 @@ select is(
    join public.players p on p.id = s.player_id
    where s.match_id = '33333333-3333-4333-8333-000000000003'
      and p.player_code = 'PLR-A7K2'),
-  12.0::numeric(6, 3),
-  'the corrected final score is 8.0 plus 4'
+  36::numeric(6, 3),
+  'the corrected final score is 32 plus 4'
 );
 
 select is(

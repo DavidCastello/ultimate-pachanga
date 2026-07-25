@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
 import { Loader2 } from 'lucide-react'
 import { AppLayout } from '@/app/AppLayout'
-import { AdminRoute, ProtectedRoute } from '@/app/guards'
+import { AdminRoute, LeagueMemberRoute, ProtectedRoute } from '@/app/guards'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
@@ -13,9 +13,19 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
  * screens, the CSV parser or the import dialog. Login and the 404 stay eager:
  * they are the two pages most likely to be the very first render.
  */
+const OnboardingPage = lazy(() =>
+  import('@/pages/OnboardingPage').then((module) => ({
+    default: module.OnboardingPage,
+  })),
+)
 const LeaguePage = lazy(() =>
   import('@/pages/LeaguePage').then((module) => ({
     default: module.LeaguePage,
+  })),
+)
+const ProfilePage = lazy(() =>
+  import('@/pages/ProfilePage').then((module) => ({
+    default: module.ProfilePage,
   })),
 )
 const PlayersPage = lazy(() =>
@@ -87,23 +97,33 @@ const router = createBrowserRouter([
   {
     element: <ProtectedRoute />,
     children: [
+      // Outside the layout and the membership guard: this is where an account
+      // with neither a league nor a player is sent, and the shell has nothing
+      // to render for one.
+      { path: '/onboarding', element: <OnboardingPage /> },
       {
-        element: <AppLayout />,
+        element: <LeagueMemberRoute />,
         children: [
-          { index: true, element: <Navigate to="/league" replace /> },
-          { path: '/league', element: <LeaguePage /> },
-          { path: '/players', element: <PlayersPage /> },
-          { path: '/players/:playerId', element: <PlayerDetailPage /> },
-          { path: '/matches', element: <MatchesPage /> },
-          { path: '/matches/:matchId', element: <MatchDetailPage /> },
-          { path: '/rankings', element: <RankingsPage /> },
           {
-            element: <AdminRoute />,
+            element: <AppLayout />,
             children: [
-              { path: '/matches/new', element: <MatchNewPage /> },
-              { path: '/admin/players', element: <AdminPlayersPage /> },
-              { path: '/admin/settings', element: <AdminSettingsPage /> },
-              { path: '/admin/members', element: <AdminMembersPage /> },
+              { index: true, element: <Navigate to="/league" replace /> },
+              { path: '/league', element: <LeaguePage /> },
+              { path: '/profile', element: <ProfilePage /> },
+              { path: '/players', element: <PlayersPage /> },
+              { path: '/players/:playerId', element: <PlayerDetailPage /> },
+              { path: '/matches', element: <MatchesPage /> },
+              { path: '/matches/:matchId', element: <MatchDetailPage /> },
+              { path: '/rankings', element: <RankingsPage /> },
+              {
+                element: <AdminRoute />,
+                children: [
+                  { path: '/matches/new', element: <MatchNewPage /> },
+                  { path: '/admin/players', element: <AdminPlayersPage /> },
+                  { path: '/admin/settings', element: <AdminSettingsPage /> },
+                  { path: '/admin/members', element: <AdminMembersPage /> },
+                ],
+              },
             ],
           },
         ],

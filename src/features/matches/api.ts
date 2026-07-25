@@ -91,6 +91,9 @@ export interface MatchScoreEntry {
   playerCode: string
   displayName: string
   metricScores: Record<string, number>
+  goals: number
+  /** 1 won, 0 lost, 0.5 drawn. */
+  victory: number
   baseScore: number
   attributePoints: number
   finalScore: number
@@ -103,7 +106,7 @@ export async function fetchMatchScores(
   const { data, error } = await supabase
     .from('player_match_scores')
     .select(
-      `base_score, attribute_points, final_score, metric_scores,
+      `base_score, attribute_points, final_score, metric_scores, goals, victory,
        players!inner (id, player_code, first_name, last_name, nickname),
        player_match_score_attributes (
          league_attributes (code, label, points)
@@ -121,6 +124,8 @@ export async function fetchMatchScores(
         row.players.nickname?.trim() ||
         `${row.players.first_name} ${row.players.last_name}`,
       metricScores: (row.metric_scores ?? {}) as Record<string, number>,
+      goals: row.goals,
+      victory: Number(row.victory),
       baseScore: row.base_score,
       attributePoints: row.attribute_points,
       finalScore: row.final_score,
@@ -320,6 +325,9 @@ export interface ImportRow {
   player_code: string
   metric_scores: Record<string, number>
   attribute_codes: string[]
+  goals: number
+  /** 1 won, 0 lost, 0.5 drawn. Worth two points. */
+  victory: number
 }
 
 export interface ImportSummary {

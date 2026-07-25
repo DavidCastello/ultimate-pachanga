@@ -1,15 +1,7 @@
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Award,
-  BarChart3,
-  CalendarDays,
-  TrendingUp,
-  Trophy,
-  Users,
-} from 'lucide-react'
+import { Award, CalendarDays, TrendingUp, Trophy, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AttributeBadge } from '@/components/AttributeBadge'
@@ -23,7 +15,7 @@ import {
   useLeagueAttributes,
   useMembership,
 } from '@/features/league/useLeague'
-import { formatScore } from '@/lib/formatting'
+import { formatVictories, formatWinRate } from '@/lib/formatting'
 import type { MatchRow, PlayerCardData } from '@/types/domain'
 
 const LEADERBOARD_SIZE = 5
@@ -109,8 +101,16 @@ export function LeaguePage() {
     .sort((left, right) => right.marketValueGbp - left.marketValueGbp)
     .slice(0, LEADERBOARD_SIZE)
 
-  const topByRating = [...rankedPlayers]
-    .sort((left, right) => right.cardRating - left.cardRating)
+  // Ranked by the rate that is on show, not by the raw total — a board that
+  // sorts by one number and prints another is a bug waiting to be reported.
+  // Matches played breaks ties, so a perfect record over more games wins.
+  const topByVictories = [...rankedPlayers]
+    .sort(
+      (left, right) =>
+        right.totalVictories / right.matchesPlayed -
+          left.totalVictories / left.matchesPlayed ||
+        right.matchesPlayed - left.matchesPlayed,
+    )
     .slice(0, LEADERBOARD_SIZE)
 
   // `matches` arrives newest-first, so the latest scored match is the first
@@ -237,14 +237,17 @@ export function LeaguePage() {
             )}
           />
           <LeaderboardCard
-            title="Mejor valorados"
+            title="Más victoriosos"
             icon={Trophy}
-            players={topByRating}
+            players={topByVictories}
             renderValue={(player) => (
               <span className="numeric text-sm font-semibold">
-                {player.cardRating}
+                {formatWinRate(player.totalVictories, player.matchesPlayed)}
+                {/* The rate alone would rank one lucky afternoon above a
+                    season of them. */}
                 <span className="ml-2 font-normal text-muted-foreground">
-                  {formatScore(player.careerAverage)}
+                  {formatVictories(player.totalVictories)}/
+                  {player.matchesPlayed}
                 </span>
               </span>
             )}
@@ -288,27 +291,6 @@ export function LeaguePage() {
           </CardContent>
         </Card>
       ) : null}
-
-      <div className="flex flex-wrap gap-2">
-        <Button asChild variant="outline">
-          <Link to="/players">
-            <Users className="size-4" aria-hidden="true" />
-            Jugadores
-          </Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link to="/matches">
-            <CalendarDays className="size-4" aria-hidden="true" />
-            Partidos
-          </Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link to="/rankings">
-            <BarChart3 className="size-4" aria-hidden="true" />
-            Clasificaciones
-          </Link>
-        </Button>
-      </div>
     </div>
   )
 }

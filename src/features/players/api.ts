@@ -10,6 +10,24 @@ export const playerKeys = {
   cards: (leagueId: string) => ['players', 'cards', leagueId] as const,
   card: (playerId: string) => ['players', 'card', playerId] as const,
   history: (playerId: string) => ['players', 'history', playerId] as const,
+  mine: (userId: string) => ['players', 'mine', userId] as const,
+}
+
+/**
+ * The player the signed-in account plays as, or null if it has not claimed one.
+ *
+ * A single unique index guarantees at most one per league, and RLS restricts
+ * the query to the caller's own league, so `maybeSingle` is safe.
+ */
+export async function fetchMyPlayerId(userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('players')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) throw error
+  return data?.id ?? null
 }
 
 export async function fetchPlayerCards(
@@ -49,6 +67,9 @@ export interface PlayerMatchHistoryEntry {
   matchId: string
   matchTitle: string
   playedAt: string
+  goals: number
+  /** 1 won, 0 lost, 0.5 drawn. */
+  victory: number
   baseScore: number
   attributePoints: number
   finalScore: number
@@ -72,6 +93,8 @@ export async function fetchPlayerHistory(
        attribute_points,
        final_score,
        metric_scores,
+       goals,
+       victory,
        matches!inner (id, title, played_at, status),
        player_match_score_attributes (
          league_attributes (code, label, points)
@@ -87,6 +110,8 @@ export async function fetchPlayerHistory(
     matchId: row.matches.id,
     matchTitle: row.matches.title,
     playedAt: row.matches.played_at,
+    goals: row.goals,
+    victory: Number(row.victory),
     baseScore: row.base_score,
     attributePoints: row.attribute_points,
     finalScore: row.final_score,
@@ -181,49 +206,119 @@ export async function setPlayerActive(
   if (error) throw error
 }
 
-const MAX_AVATAR_BYTES = 3 * 1024 * 1024
-const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-
 /**
- * Uploads a player photograph and records its path.
+ * Edits the caller's own player.
  *
- * The path is `{leagueId}/{playerId}.{ext}`, which is what the storage
- * policies authorize against — the first segment identifies the league. Upload
- * uses upsert so replacing a photo overwrites rather than accumulating files.
+ * A member reaches these fields through a function rather than the table
+ * because RLS cannot restrict columns: an update policy wide enough to let
+ * someone rename themselves would also hand them their import code and their
+ * active flag. Administrators keep using updatePlayer above.
  */
-export async function uploadPlayerAvatar(
-  leagueId: string,
+export async function updateOwnPlayerProfile(
   playerId: string,
-  file: File,
-): Promise<string> {
-  if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
-    throw new Error('La imagen debe ser JPEG, PNG o WebP')
-  }
+  input: PlayerInput,
+): Promise<void> {
+  const { error } = await supabase.rpc('update_own_player_profile', {
+    p_player_id: playerId,
+    p_first_name: input.firstName,
+    p_last_name: input.lastName,
+    // The function folds blank to null, and PostgREST types every text
+    // argument as non-nullable, so "no nickname" travels as an empty string.
+    p_nickname: input.nickname ?? '',
+    p_preferred_position: input.preferredPosition,
+  })
+
+  if (error) throw error
+}
+
+const MAX_AVATAR_BYTES = 3 * 1024 * 1024
+
+const AVATAR_EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+}
+
+/** Validates a chosen photograph and returns the extension its path will use. */
+function toAvatarExtension(file: File): string {
+  const extension = AVATAR_EXTENSIONS[file.type]
+
+  if (!extension) throw new Error('La imagen debe ser JPEG, PNG o WebP')
 
   if (file.size > MAX_AVATAR_BYTES) {
     throw new Error('La imagen no puede superar los 3 MB')
   }
 
-  const extension =
-    file.type === 'image/png'
-      ? 'png'
-      : file.type === 'image/webp'
-        ? 'webp'
-        : 'jpg'
+  return extension
+}
+
+/**
+ * Uploads a photograph to `{leagueId}/{playerId}.{ext}`.
+ *
+ * That layout is what the storage policies authorize against: the first
+ * segment identifies the league and the file name identifies the player, so
+ * neither an administrator's nor a member's write needs a lookup table.
+ * Upsert replaces rather than accumulating files.
+ */
+async function uploadAvatarObject(
+  leagueId: string,
+  playerId: string,
+  file: File,
+  extension: string,
+): Promise<string> {
   const path = `${leagueId}/${playerId}.${extension}`
 
-  const { error: uploadError } = await supabase.storage
+  const { error } = await supabase.storage
     .from(PLAYER_AVATARS_BUCKET)
     .upload(path, file, { upsert: true, contentType: file.type })
 
-  if (uploadError) throw uploadError
+  if (error) throw error
+  return path
+}
 
-  const { error: updateError } = await supabase
+/** Uploads a player photograph and records its path. Administrators only. */
+export async function uploadPlayerAvatar(
+  leagueId: string,
+  playerId: string,
+  file: File,
+): Promise<string> {
+  const extension = toAvatarExtension(file)
+  const path = await uploadAvatarObject(leagueId, playerId, file, extension)
+
+  const { error } = await supabase
     .from('players')
     .update({ avatar_path: path })
     .eq('id', playerId)
 
-  if (updateError) throw updateError
+  if (error) throw error
 
   return path
+}
+
+/**
+ * Uploads the caller's own photograph.
+ *
+ * The path is sent to the database as an extension only; the function rebuilds
+ * it from the player's own league and id, so a member cannot point their card
+ * at somebody else's object.
+ */
+export async function uploadOwnPlayerAvatar(
+  leagueId: string,
+  playerId: string,
+  file: File,
+): Promise<string> {
+  const extension = toAvatarExtension(file)
+  await uploadAvatarObject(leagueId, playerId, file, extension)
+
+  const { data, error } = await supabase.rpc('set_own_player_avatar', {
+    p_player_id: playerId,
+    p_extension: extension,
+  })
+
+  if (error) throw error
+  // The function always returns the path; PostgREST types it nullable because
+  // plpgsql cannot promise that.
+  if (!data) throw new Error('No se pudo guardar la foto')
+
+  return data
 }

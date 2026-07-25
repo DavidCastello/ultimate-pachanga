@@ -5,6 +5,8 @@ import {
   formatMarketValueExact,
   formatPosition,
   formatScore,
+  formatVictories,
+  formatWinRate,
   toInitials,
 } from './formatting'
 
@@ -48,6 +50,40 @@ describe('formatMarketValueExact', () => {
     expect(normalizeSpaces(formatMarketValueExact(8_250_000))).toBe(
       '8.250.000 £',
     )
+  })
+})
+
+describe('formatVictories', () => {
+  // Draws are half wins, so totals are often fractional.
+  it('keeps the half', () => {
+    expect(formatVictories(1.5)).toBe('1,5')
+  })
+
+  it('does not invent a decimal for a whole number', () => {
+    expect(formatVictories(3)).toBe('3')
+  })
+
+  it('has no value when there is none', () => {
+    expect(formatVictories(null)).toBe('—')
+  })
+})
+
+describe('formatWinRate', () => {
+  it('is victory points over matches played', () => {
+    expect(normalizeSpaces(formatWinRate(1.5, 2))).toBe('75 %')
+  })
+
+  it('reads a clean sweep as a hundred per cent', () => {
+    expect(normalizeSpaces(formatWinRate(4, 4))).toBe('100 %')
+  })
+
+  it('rounds to whole points', () => {
+    expect(normalizeSpaces(formatWinRate(1, 3))).toBe('33 %')
+  })
+
+  // Nobody has a win rate before they have played.
+  it('has no value without a match', () => {
+    expect(formatWinRate(0, 0)).toBe('—')
   })
 })
 

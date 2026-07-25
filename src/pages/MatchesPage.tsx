@@ -29,7 +29,9 @@ function MatchSection({
       <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
         {title}
       </h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Two columns at most: the cards are wide so the venue photograph reads
+          as a place rather than a texture. */}
+      <div className="grid gap-3 lg:grid-cols-2">
         {matches.map((match) => (
           <MatchCard key={match.id} match={match} />
         ))}
@@ -80,9 +82,9 @@ export function MatchesPage() {
       </div>
 
       {isPending ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }, (_, index) => (
-            <Skeleton key={index} className="h-40 rounded-xl" />
+        <div className="grid gap-3 lg:grid-cols-2">
+          {Array.from({ length: 4 }, (_, index) => (
+            <Skeleton key={index} className="h-32 rounded-xl" />
           ))}
         </div>
       ) : (matches ?? []).length === 0 ? (

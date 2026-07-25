@@ -55,12 +55,43 @@ export function formatMarketValueExact(
   return GBP_EXACT.format(value)
 }
 
-/** A 0–10 score, or an em dash when the player has never been scored. */
+/** A score, or an em dash when the player has never been scored. */
 export function formatScore(value: number | null | undefined): string {
   if (value === null || value === undefined) return '—'
   return value.toLocaleString('es-ES', {
     minimumFractionDigits: 1,
     maximumFractionDigits: 2,
+  })
+}
+
+/**
+ * A victory total.
+ *
+ * Draws are half wins, so the total is often fractional — but "3" reads better
+ * than "3,0", and only the halves need the decimal.
+ */
+export function formatVictories(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '—'
+  return value.toLocaleString('es-ES', { maximumFractionDigits: 1 })
+}
+
+/**
+ * Victory points as a share of matches played.
+ *
+ * Two wins and two draws in six games is 50 %. A rate says more than a total
+ * once players have turned out a different number of times — but only in
+ * company: 100 % off one match is not the same achievement as 80 % off ten, so
+ * every caller shows the match count beside it.
+ */
+export function formatWinRate(
+  victories: number,
+  matchesPlayed: number,
+): string {
+  if (matchesPlayed <= 0) return '—'
+
+  return (victories / matchesPlayed).toLocaleString('es-ES', {
+    style: 'percent',
+    maximumFractionDigits: 0,
   })
 }
 

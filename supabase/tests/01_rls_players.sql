@@ -7,15 +7,15 @@
 -- ============================================================================
 
 begin;
-select plan(16);
+select plan(14);
 
 -- ---------------------------------------------------------------------------
--- Two accounts. The first to register becomes administrator of the initial
--- league (app.handle_new_user), so insert order is significant.
+-- One administrator and one member. Registration itself grants nothing since
+-- 008 — see 09_player_user_link.sql for the bootstrap and join flow — so both
+-- memberships are created here explicitly.
 --
--- Membership is cleared first so the trigger's decision does not depend on
--- whoever happens to have signed up in this database already. Everything here
--- is rolled back at the end of the file.
+-- Membership is cleared first so nothing depends on whoever happens to have
+-- signed up in this database already. Everything is rolled back at the end.
 -- ---------------------------------------------------------------------------
 
 delete from public.league_members;
@@ -34,19 +34,11 @@ values (
   'authenticated', 'authenticated', 'member@test.local'
 );
 
-select is(
-  (select role::text from public.league_members
-   where user_id = '99999999-9999-4999-8999-00000000000a'),
-  'admin',
-  'the first registered account becomes the league administrator'
-);
-
-select is(
-  (select role::text from public.league_members
-   where user_id = '99999999-9999-4999-8999-00000000000b'),
-  'member',
-  'subsequent accounts join as members'
-);
+-- Registering grants nothing since 008, so both memberships are explicit.
+insert into public.league_members (league_id, user_id, role)
+values
+  (app.initial_league_id(), '99999999-9999-4999-8999-00000000000a', 'admin'),
+  (app.initial_league_id(), '99999999-9999-4999-8999-00000000000b', 'member');
 
 select ok(
   (select bool_and(rowsecurity) from pg_tables

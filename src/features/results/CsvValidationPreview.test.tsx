@@ -43,7 +43,8 @@ const CONTEXT: ParseContext = {
 }
 
 const HEADER =
-  'CodigoJugador,Nombre,Apellidos,Ataque,Defensa,Tactica,Fisico,Atributos'
+  'CodigoJugador,Nombre,Apellidos,Ataque,Defensa,Tactica,Fisico,' +
+  'Goles,Victoria,Atributos'
 
 function renderPreview(...rows: string[]) {
   const result = parseScoreCsv([HEADER, ...rows].join('\n'), CONTEXT)
@@ -62,22 +63,22 @@ function renderPreview(...rows: string[]) {
 describe('CsvValidationPreview', () => {
   it('shows the computed scores for a clean file', () => {
     renderPreview(
-      'PLR-A7K2,David,Castelló,6,9,8,7,Zamora',
-      'PLR-B9F1,Juan,García,2,8,7,6,',
+      'PLR-A7K2,David,Castelló,6,9,8,7,1,1,Zamora',
+      'PLR-B9F1,Juan,García,2,8,7,6,1,1,',
     )
 
     expect(screen.getByText('David Castelló')).toBeInTheDocument()
     expect(screen.getByText('PLR-A7K2')).toBeInTheDocument()
-    // Base 7,5 and final 9,5 from the specification's example.
-    expect(screen.getByText('7,5')).toBeInTheDocument()
-    expect(screen.getByText('9,5')).toBeInTheDocument()
+    // 6+9+8+7 = 30 base, Zamora +2, a win +2 -> 34.
+    expect(screen.getByText('30,0')).toBeInTheDocument()
+    expect(screen.getByText('34,0')).toBeInTheDocument()
     expect(screen.getByText('Zamora')).toBeInTheDocument()
   })
 
   it('confirms how many players are ready when there are no problems', () => {
     renderPreview(
-      'PLR-A7K2,David,Castelló,6,9,8,7,',
-      'PLR-B9F1,Juan,García,5,5,5,5,',
+      'PLR-A7K2,David,Castelló,6,9,8,7,1,1,',
+      'PLR-B9F1,Juan,García,5,5,5,5,1,1,',
     )
 
     expect(screen.getByText(/2 jugadores listos para importar/i)).toBeVisible()
@@ -85,8 +86,8 @@ describe('CsvValidationPreview', () => {
 
   it('reports an out-of-range score with its row number', () => {
     renderPreview(
-      'PLR-A7K2,David,Castelló,11,9,8,7,',
-      'PLR-B9F1,Juan,García,5,5,5,5,',
+      'PLR-A7K2,David,Castelló,11,9,8,7,1,1,',
+      'PLR-B9F1,Juan,García,5,5,5,5,1,1,',
     )
 
     const alerts = screen.getAllByRole('alert')
@@ -97,8 +98,8 @@ describe('CsvValidationPreview', () => {
 
   it('explains that nothing is imported while errors remain', () => {
     renderPreview(
-      'PLR-A7K2,David,Castelló,11,9,8,7,',
-      'PLR-B9F1,Juan,García,5,5,5,5,',
+      'PLR-A7K2,David,Castelló,11,9,8,7,1,1,',
+      'PLR-B9F1,Juan,García,5,5,5,5,1,1,',
     )
 
     expect(
@@ -108,8 +109,8 @@ describe('CsvValidationPreview', () => {
 
   it('still previews the rows that are valid', () => {
     renderPreview(
-      'PLR-A7K2,David,Castelló,11,9,8,7,',
-      'PLR-B9F1,Juan,García,5,5,5,5,',
+      'PLR-A7K2,David,Castelló,11,9,8,7,1,1,',
+      'PLR-B9F1,Juan,García,5,5,5,5,1,1,',
     )
 
     expect(screen.getByText('Juanito')).toBeInTheDocument()
@@ -138,8 +139,8 @@ describe('CsvValidationPreview', () => {
 
   it('reports an unknown attribute', () => {
     renderPreview(
-      'PLR-A7K2,David,Castelló,5,5,5,5,Balón de Oro',
-      'PLR-B9F1,Juan,García,5,5,5,5,',
+      'PLR-A7K2,David,Castelló,5,5,5,5,1,1,Balón de Oro',
+      'PLR-B9F1,Juan,García,5,5,5,5,1,1,',
     )
 
     expect(screen.getByText(/no es un atributo de esta liga/)).toBeVisible()
@@ -147,13 +148,15 @@ describe('CsvValidationPreview', () => {
 
   it('shows a penalty as a negative badge', () => {
     renderPreview(
-      'PLR-A7K2,David,Castelló,5,5,5,5,Lesión',
-      'PLR-B9F1,Juan,García,5,5,5,5,',
+      // A defeat, so the final score differs from the base and the assertion
+      // below cannot match the wrong cell.
+      'PLR-A7K2,David,Castelló,5,5,5,5,1,0,Lesión',
+      'PLR-B9F1,Juan,García,5,5,5,5,1,1,',
     )
 
     expect(screen.getByText('Lesión')).toBeInTheDocument()
     expect(screen.getByText('−2')).toBeInTheDocument()
-    // 5.0 base minus 2.
-    expect(screen.getByText('3,0')).toBeInTheDocument()
+    // 5+5+5+5 = 20 base, less two for the injury, nothing for the defeat.
+    expect(screen.getByText('18,0')).toBeInTheDocument()
   })
 })

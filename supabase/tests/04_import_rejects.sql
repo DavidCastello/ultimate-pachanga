@@ -7,10 +7,9 @@
 -- ============================================================================
 
 begin;
-select plan(21);
+select plan(26);
 
--- Cleared so the new-user trigger makes the first insert below an
--- administrator regardless of who already exists in this database.
+-- Cleared so this file's memberships are the only ones in the database.
 delete from public.league_members;
 
 insert into auth.users (id, instance_id, aud, role, email)
@@ -26,6 +25,12 @@ values (
   '00000000-0000-0000-0000-000000000000',
   'authenticated', 'authenticated', 'member@test.local'
 );
+
+-- Registering grants nothing since 008, so both memberships are explicit.
+insert into public.league_members (league_id, user_id, role)
+values
+  (app.initial_league_id(), '99999999-9999-4999-8999-00000000000a', 'admin'),
+  (app.initial_league_id(), '99999999-9999-4999-8999-00000000000b', 'member');
 
 -- ---------------------------------------------------------------------------
 -- A member cannot import at all
@@ -273,6 +278,79 @@ select is(
    where match_id = '33333333-3333-4333-8333-000000000003'),
   0,
   'the valid row in a failed batch was rolled back too'
+);
+
+-- ---------------------------------------------------------------------------
+-- Goals and victories
+--
+-- Both default to zero when absent, so the only thing left to guard is a value
+-- that is present and wrong.
+-- ---------------------------------------------------------------------------
+
+select throws_ok(
+  $$select public.import_match_scores(
+      '33333333-3333-4333-8333-000000000003',
+      '[{"player_code": "PLR-A7K2",
+         "metric_scores": {"attack": 7, "defence": 7, "tactics": 7,
+                           "physical": 7},
+         "victory": 1.5}]'::jsonb
+    )$$,
+  '22003',
+  null,
+  'a victory share above one is refused'
+);
+
+select throws_ok(
+  $$select public.import_match_scores(
+      '33333333-3333-4333-8333-000000000003',
+      '[{"player_code": "PLR-A7K2",
+         "metric_scores": {"attack": 7, "defence": 7, "tactics": 7,
+                           "physical": 7},
+         "victory": -0.5}]'::jsonb
+    )$$,
+  '22003',
+  null,
+  'a negative victory share is refused'
+);
+
+-- A victory typed as "yes" must not quietly become a defeat.
+select throws_ok(
+  $$select public.import_match_scores(
+      '33333333-3333-4333-8333-000000000003',
+      '[{"player_code": "PLR-A7K2",
+         "metric_scores": {"attack": 7, "defence": 7, "tactics": 7,
+                           "physical": 7},
+         "victory": "si"}]'::jsonb
+    )$$,
+  '22023',
+  null,
+  'a victory that is not a number is refused'
+);
+
+select throws_ok(
+  $$select public.import_match_scores(
+      '33333333-3333-4333-8333-000000000003',
+      '[{"player_code": "PLR-A7K2",
+         "metric_scores": {"attack": 7, "defence": 7, "tactics": 7,
+                           "physical": 7},
+         "goals": 1.5}]'::jsonb
+    )$$,
+  '22003',
+  null,
+  'half a goal is refused'
+);
+
+select throws_ok(
+  $$select public.import_match_scores(
+      '33333333-3333-4333-8333-000000000003',
+      '[{"player_code": "PLR-A7K2",
+         "metric_scores": {"attack": 7, "defence": 7, "tactics": 7,
+                           "physical": 7},
+         "goals": -1}]'::jsonb
+    )$$,
+  '22003',
+  null,
+  'a negative goal count is refused'
 );
 
 select * from finish();

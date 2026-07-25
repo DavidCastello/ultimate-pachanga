@@ -3,7 +3,9 @@ import {
   calculateAttributePoints,
   calculateBaseScore,
   calculateScoreBreakdown,
+  isGoalCountValid,
   isMetricScoreInRange,
+  isVictoryShareValid,
   toCardStat,
   toCardTier,
   type AttributeDefinition,
@@ -27,16 +29,17 @@ const INJURY: AttributeDefinition = {
 }
 
 describe('calculateBaseScore', () => {
-  // The worked example from the specification.
-  it('averages the metric scores', () => {
-    expect(calculateBaseScore([6, 9, 8, 7])).toBe(7.5)
+  // The worked example from the specification, on the post-009 scale: the sum
+  // of the four metrics rather than their mean.
+  it('sums the metric scores', () => {
+    expect(calculateBaseScore([6, 9, 8, 7])).toBe(30)
   })
 
   it('handles a single metric', () => {
     expect(calculateBaseScore([8])).toBe(8)
   })
 
-  it('refuses to average nothing', () => {
+  it('refuses to total nothing', () => {
     expect(() => calculateBaseScore([])).toThrow(/at least one metric/i)
   })
 })
@@ -60,29 +63,62 @@ describe('calculateAttributePoints', () => {
 })
 
 describe('calculateScoreBreakdown', () => {
-  it('matches the specification example: 7.5 base plus Zamora is 9.5', () => {
-    expect(calculateScoreBreakdown([6, 9, 8, 7], [ZAMORA])).toEqual({
-      baseScore: 7.5,
+  // 6+9+8+7 = 30, Zamora +2, a win +2.
+  it('matches the specification example: 30 base, Zamora and a win is 34', () => {
+    expect(calculateScoreBreakdown([6, 9, 8, 7], [ZAMORA], 1)).toEqual({
+      baseScore: 30,
       attributePoints: 2,
-      finalScore: 9.5,
+      victoryPoints: 2,
+      finalScore: 34,
     })
   })
 
-  it('lets a final score exceed the metric maximum', () => {
-    expect(calculateScoreBreakdown([8, 8, 9, 7], [MVP, PUSKAS])).toEqual({
-      baseScore: 8,
-      attributePoints: 4,
-      finalScore: 12,
+  it('gives a draw half the victory points', () => {
+    expect(calculateScoreBreakdown([6, 9, 8, 7], [], 0.5)).toEqual({
+      baseScore: 30,
+      attributePoints: 0,
+      victoryPoints: 1,
+      finalScore: 31,
     })
+  })
+
+  it('adds nothing for a defeat', () => {
+    expect(calculateScoreBreakdown([6, 9, 8, 7], [], 0).finalScore).toBe(30)
   })
 
   it('lets a final score fall below zero', () => {
     expect(
-      calculateScoreBreakdown([1, 0, 0, 1], [INJURY, INJURY]).finalScore,
-    ).toBe(-3.5)
+      calculateScoreBreakdown([1, 0, 0, 1], [INJURY, INJURY], 0).finalScore,
+    ).toBe(-2)
   })
 })
 
+describe('isVictoryShareValid', () => {
+  it.each([0, 0.5, 1, 0.25])('accepts %s', (share) => {
+    expect(isVictoryShareValid(share)).toBe(true)
+  })
+
+  it.each([-0.1, 1.1, Number.NaN, Number.POSITIVE_INFINITY])(
+    'rejects %s',
+    (share) => {
+      expect(isVictoryShareValid(share)).toBe(false)
+    },
+  )
+})
+
+describe('isGoalCountValid', () => {
+  it.each([0, 1, 12])('accepts %s', (goals) => {
+    expect(isGoalCountValid(goals)).toBe(true)
+  })
+
+  // Half a goal is not a thing, and neither is a negative one.
+  it.each([-1, 1.5, Number.NaN])('rejects %s', (goals) => {
+    expect(isGoalCountValid(goals)).toBe(false)
+  })
+})
+
+// Per-metric card stats are still 0-10 averages: only the overall rating
+// changed in 009, and that one is population-relative and lives in the view.
 describe('toCardStat', () => {
   it('scales a 0-10 average onto 0-99', () => {
     expect(toCardStat(7.5)).toBe(75)

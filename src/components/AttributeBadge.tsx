@@ -7,6 +7,14 @@ interface AttributeBadgeProps {
   points: number
   /** Shown as "x3" when a player has earned the same award several times. */
   count?: number
+  /**
+   * Whether to show what the award is worth.
+   *
+   * Off by default: what an award is worth is the database's arithmetic, and
+   * repeating it beside every chip is noise. The import preview turns it back
+   * on, because checking that arithmetic is the entire point of that screen.
+   */
+  showPoints?: boolean
   className?: string
 }
 
@@ -18,6 +26,7 @@ export function AttributeBadge({
   label,
   points,
   count,
+  showPoints = false,
   className,
 }: AttributeBadgeProps) {
   const isPenalty = points < 0
@@ -37,9 +46,11 @@ export function AttributeBadge({
       {count !== undefined && count > 1 ? (
         <span className="numeric opacity-70">×{count}</span>
       ) : null}
-      <span className="numeric opacity-70">
-        {formatAttributePoints(points)}
-      </span>
+      {showPoints ? (
+        <span className="numeric opacity-70">
+          {formatAttributePoints(points)}
+        </span>
+      ) : null}
     </Badge>
   )
 }

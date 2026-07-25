@@ -7,7 +7,7 @@
 -- ============================================================================
 
 begin;
-select plan(15);
+select plan(17);
 
 -- Cleared so the new-user trigger makes this account an administrator
 -- regardless of who already exists in this database.
@@ -145,11 +145,30 @@ select is(
   'market value is the weighted score times the league constant'
 );
 
+-- The rating is a standing, not a measurement. Two players have a latest score
+-- here — 9.5 and 4.0 — so the league mean is 6.75 and the population standard
+-- deviation is exactly 2.75. Each of them therefore sits one deviation from the
+-- centre, which is twelve points.
 select is(
   (select card_rating from public.player_market_values
    where player_id = '77777777-7777-4777-8777-000000000001'),
-  83,
-  'card rating is the weighted score on the 0-99 scale'
+  82,
+  'a player one standard deviation above the league rates 70 + 12'
+);
+
+select is(
+  (select card_rating from public.player_market_values
+   where player_id = '77777777-7777-4777-8777-000000000002'),
+  58,
+  'and one standard deviation below rates 70 - 12'
+);
+
+-- Nobody to compare against yet, so the centre is the only honest answer.
+select is(
+  (select card_rating from public.player_market_values
+   where player_id = '77777777-7777-4777-8777-000000000003'),
+  70,
+  'a player who has never been scored sits at the centre'
 );
 
 -- ---------------------------------------------------------------------------

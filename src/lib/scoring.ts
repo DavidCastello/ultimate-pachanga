@@ -14,6 +14,14 @@
 /** Upper bound of the display scale used on cards. */
 const CARD_STAT_MAX = 99
 
+/**
+ * What a full victory adds to a final score.
+ *
+ * Mirrors `app.victory_points()`. Unlike metrics and attributes this is not
+ * configurable per league — it is part of the definition of the score.
+ */
+export const VICTORY_POINTS = 2
+
 export interface MetricDefinition {
   code: string
   label: string
@@ -30,6 +38,7 @@ export interface AttributeDefinition {
 export interface ScoreBreakdown {
   baseScore: number
   attributePoints: number
+  victoryPoints: number
   finalScore: number
 }
 
@@ -50,18 +59,21 @@ function roundHalfAwayFromZero(value: number): number {
 }
 
 /**
- * The mean of the supplied metric scores.
+ * The sum of the supplied metric scores.
+ *
+ * A sum rather than a mean, so that being good at everything beats being good
+ * at one thing. With the four default metrics this puts the base score on a
+ * 0–40 scale.
  *
  * Callers must pass a value for every active metric; a missing metric is a
- * validation error upstream, not something to silently average around.
+ * validation error upstream, not something to silently total around.
  */
 export function calculateBaseScore(metricScores: readonly number[]): number {
   if (metricScores.length === 0) {
     throw new Error('A base score needs at least one metric score')
   }
 
-  const total = metricScores.reduce((sum, score) => sum + score, 0)
-  return total / metricScores.length
+  return metricScores.reduce((sum, score) => sum + score, 0)
 }
 
 export function calculateAttributePoints(
@@ -71,23 +83,44 @@ export function calculateAttributePoints(
 }
 
 /**
- * Base score plus attribute points.
+ * Whether a victory share is one the database will accept.
+ *
+ * A share rather than a flag: 1 won, 0 lost, 0.5 drawn, and anything between
+ * for the games that end in an arrangement.
+ */
+export function isVictoryShareValid(victory: number): boolean {
+  return Number.isFinite(victory) && victory >= 0 && victory <= 1
+}
+
+/** Whether a goal count is one the database will accept. */
+export function isGoalCountValid(goals: number): boolean {
+  return Number.isInteger(goals) && goals >= 0
+}
+
+/**
+ * Metrics, plus attribute points, plus two points for a win.
  *
  * Deliberately unclamped: a Puskás and an MVP on top of a strong performance
- * can exceed the metric maximum, and an injury can push a score below zero.
+ * can exceed the metric total, and an injury can push a score below zero.
  * Both are intended.
+ *
+ * Goals are not here on purpose — they are recorded and displayed but do not
+ * score.
  */
 export function calculateScoreBreakdown(
   metricScores: readonly number[],
   attributes: readonly AttributeDefinition[],
+  victory: number,
 ): ScoreBreakdown {
   const baseScore = calculateBaseScore(metricScores)
   const attributePoints = calculateAttributePoints(attributes)
+  const victoryPoints = victory * VICTORY_POINTS
 
   return {
     baseScore,
     attributePoints,
-    finalScore: baseScore + attributePoints,
+    victoryPoints,
+    finalScore: baseScore + attributePoints + victoryPoints,
   }
 }
 

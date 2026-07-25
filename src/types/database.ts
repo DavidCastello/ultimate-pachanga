@@ -336,36 +336,42 @@ export type Database = {
           base_score: number
           created_at: string
           final_score: number
+          goals: number
           id: string
           imported_by: string | null
           match_id: string
           metric_scores: Json
           player_id: string
           updated_at: string
+          victory: number
         }
         Insert: {
           attribute_points?: number
           base_score: number
           created_at?: string
           final_score: number
+          goals?: number
           id?: string
           imported_by?: string | null
           match_id: string
           metric_scores: Json
           player_id: string
           updated_at?: string
+          victory?: number
         }
         Update: {
           attribute_points?: number
           base_score?: number
           created_at?: string
           final_score?: number
+          goals?: number
           id?: string
           imported_by?: string | null
           match_id?: string
           metric_scores?: Json
           player_id?: string
           updated_at?: string
+          victory?: number
         }
         Relationships: [
           {
@@ -418,6 +424,7 @@ export type Database = {
           player_code: string
           preferred_position: Database["public"]["Enums"]["player_position"]
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           avatar_path?: string | null
@@ -431,6 +438,7 @@ export type Database = {
           player_code: string
           preferred_position: Database["public"]["Enums"]["player_position"]
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           avatar_path?: string | null
@@ -444,6 +452,7 @@ export type Database = {
           player_code?: string
           preferred_position?: Database["public"]["Enums"]["player_position"]
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -481,7 +490,10 @@ export type Database = {
           preferred_position:
             | Database["public"]["Enums"]["player_position"]
             | null
+          total_goals: number | null
+          total_victories: number | null
           updated_at: string | null
+          user_id: string | null
           weighted_performance_score: number | null
         }
         Relationships: [
@@ -503,6 +515,8 @@ export type Database = {
           market_value_gbp: number | null
           matches_played: number | null
           player_id: string | null
+          total_goals: number | null
+          total_victories: number | null
           weighted_performance_score: number | null
         }
         Relationships: [
@@ -538,12 +552,35 @@ export type Database = {
       }
     }
     Functions: {
+      create_player_and_join: {
+        Args: {
+          p_first_name: string
+          p_last_name: string
+          p_league_id: string
+          p_nickname: string
+          p_preferred_position: Database["public"]["Enums"]["player_position"]
+        }
+        Returns: string
+      }
       import_match_scores: {
         Args: { p_match_id: string; p_rows: Json }
         Returns: Json
       }
       is_league_admin: { Args: { p_league_id: string }; Returns: boolean }
       is_league_member: { Args: { p_league_id: string }; Returns: boolean }
+      join_league_as_player: {
+        Args: { p_league_id: string; p_player_id: string }
+        Returns: undefined
+      }
+      list_joinable_leagues: {
+        Args: never
+        Returns: {
+          is_member: boolean
+          league_id: string
+          title: string
+          unclaimed_player_count: number
+        }[]
+      }
       list_league_members: {
         Args: { p_league_id: string }
         Returns: {
@@ -555,9 +592,46 @@ export type Database = {
           user_id: string
         }[]
       }
+      list_unclaimed_players: {
+        Args: { p_league_id: string }
+        Returns: {
+          avatar_path: string
+          display_name: string
+          first_name: string
+          last_name: string
+          nickname: string
+          player_code: string
+          player_id: string
+          preferred_position: Database["public"]["Enums"]["player_position"]
+        }[]
+      }
       match_league_id: { Args: { p_match_id: string }; Returns: string }
+      owns_player: { Args: { p_player_id: string }; Returns: boolean }
       score_league_id: { Args: { p_score_id: string }; Returns: string }
+      set_own_player_avatar: {
+        Args: { p_extension: string; p_player_id: string }
+        Returns: string
+      }
+      to_card_rating: {
+        Args: {
+          p_latest_score: number
+          p_league_mean: number
+          p_league_spread: number
+        }
+        Returns: number
+      }
       to_card_stat: { Args: { p_average: number }; Returns: number }
+      update_own_player_profile: {
+        Args: {
+          p_first_name: string
+          p_last_name: string
+          p_nickname: string
+          p_player_id: string
+          p_preferred_position: Database["public"]["Enums"]["player_position"]
+        }
+        Returns: undefined
+      }
+      victory_points: { Args: never; Returns: number }
     }
     Enums: {
       attendance_status: "called_up" | "confirmed" | "played" | "absent"

@@ -9,8 +9,7 @@
 begin;
 select plan(16);
 
--- Cleared so the new-user trigger makes the first insert below an
--- administrator regardless of who already exists in this database.
+-- Cleared so this file's memberships are the only ones in the database.
 delete from public.league_members;
 
 insert into auth.users (id, instance_id, aud, role, email)
@@ -26,6 +25,12 @@ values (
   '00000000-0000-0000-0000-000000000000',
   'authenticated', 'authenticated', 'member@test.local'
 );
+
+-- Registering grants nothing since 008, so both memberships are explicit.
+insert into public.league_members (league_id, user_id, role)
+values
+  (app.initial_league_id(), '99999999-9999-4999-8999-00000000000a', 'admin'),
+  (app.initial_league_id(), '99999999-9999-4999-8999-00000000000b', 'member');
 
 -- ---------------------------------------------------------------------------
 -- list_league_members
@@ -98,10 +103,12 @@ select throws_ok(
 -- League settings
 -- ---------------------------------------------------------------------------
 
+-- Six million is double the league's constant, so every valuation should
+-- double with it.
 with attempted as (
   update public.leagues
   set title = 'Liga renombrada',
-      market_constant_gbp = 2000000
+      market_constant_gbp = 6000000
   where id = '11111111-1111-4111-8111-111111111111'
   returning 1
 )
@@ -112,12 +119,12 @@ select is(
 );
 
 -- Market values are derived, so a new constant applies immediately with
--- nothing to re-import.
+-- nothing to re-import. The seeded PLR-K1Q2 carries a weighted score of 32.
 select is(
   (select market_value_gbp from public.player_market_values mv
    join public.players p on p.id = mv.player_id
    where p.player_code = 'PLR-K1Q2'),
-  19750000.00::numeric,
+  192000000.00::numeric,
   'doubling the market constant doubles every valuation at once'
 );
 

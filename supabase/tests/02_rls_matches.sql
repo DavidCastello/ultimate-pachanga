@@ -9,8 +9,7 @@
 begin;
 select plan(16);
 
--- Cleared so the new-user trigger makes the first insert below an
--- administrator regardless of who already exists in this database.
+-- Cleared so this file's memberships are the only ones in the database.
 delete from public.league_members;
 
 insert into auth.users (id, instance_id, aud, role, email)
@@ -26,6 +25,12 @@ values (
   '00000000-0000-0000-0000-000000000000',
   'authenticated', 'authenticated', 'member@test.local'
 );
+
+-- Registering grants nothing since 008, so both memberships are explicit.
+insert into public.league_members (league_id, user_id, role)
+values
+  (app.initial_league_id(), '99999999-9999-4999-8999-00000000000a', 'admin'),
+  (app.initial_league_id(), '99999999-9999-4999-8999-00000000000b', 'member');
 
 -- ---------------------------------------------------------------------------
 -- Member
@@ -70,10 +75,11 @@ select ok(
   'a member can read the league metrics'
 );
 
+-- Five from migration 001 plus Pichichi from 010.
 select ok(
   (select count(*) from public.league_attributes
    where league_id = '11111111-1111-4111-8111-111111111111'
-     and is_active) = 5,
+     and is_active) = 6,
   'a member can read the league attributes'
 );
 
