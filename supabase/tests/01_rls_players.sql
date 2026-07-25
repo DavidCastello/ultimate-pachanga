@@ -12,7 +12,13 @@ select plan(16);
 -- ---------------------------------------------------------------------------
 -- Two accounts. The first to register becomes administrator of the initial
 -- league (app.handle_new_user), so insert order is significant.
+--
+-- Membership is cleared first so the trigger's decision does not depend on
+-- whoever happens to have signed up in this database already. Everything here
+-- is rolled back at the end of the file.
 -- ---------------------------------------------------------------------------
+
+delete from public.league_members;
 
 insert into auth.users (id, instance_id, aud, role, email)
 values (

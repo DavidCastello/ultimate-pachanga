@@ -10,16 +10,19 @@ even though the interface shows one.
 
 ## Status
 
-**Stages 0–1 of 4 complete** — scaffold, tooling, CI, and the full database
-layer (schema, RLS, scoring, views, seed data, 90 pgTAP assertions).
+**Stages 0–2 of 4 complete.** You can sign in, browse the roster as football
+cards, open a player's detail and history, and manage players as an
+administrator. Matches and CSV scoring come next.
 
 | Stage | Scope                                                | State      |
 | ----- | ---------------------------------------------------- | ---------- |
 | 0     | Vite + React + shadcn/ui scaffold, linting, CI       | ✅ Done    |
 | 1     | Database schema, RLS, scoring functions, views, seed | ✅ Done    |
-| 2     | Auth, routing, players and player cards              | ⏳ Next    |
-| 3     | Matches and CSV results import                       | ⏳ Planned |
+| 2     | Auth, routing, players and player cards              | ✅ Done    |
+| 3     | Matches and CSV results import                       | ⏳ Next    |
 | 4     | Rankings, dashboard, admin settings                  | ⏳ Planned |
+
+Tests: 61 frontend (Vitest), 90 database (pgTAP).
 
 ## Technology
 
@@ -111,6 +114,17 @@ npm run dev        # http://localhost:5173
 | `npm run db:types`      | Regenerate `src/types/database.ts` from the schema |
 
 Re-run `npm run db:types` after any schema change.
+
+### Sign-in stops working after `db:reset`
+
+`supabase db reset` restarts the auth container but not the API gateway, which
+goes on routing to the old container's address. Sign-up and sign-in then fail
+with "An invalid response was received from the upstream server". Restart the
+gateway:
+
+```bash
+docker restart supabase_kong_ultimate-pachanga
+```
 
 ## Repository layout
 

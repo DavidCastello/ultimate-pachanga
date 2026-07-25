@@ -9,6 +9,10 @@
 begin;
 select plan(16);
 
+-- Cleared so the new-user trigger makes the first insert below an
+-- administrator regardless of who already exists in this database.
+delete from public.league_members;
+
 insert into auth.users (id, instance_id, aud, role, email)
 values (
   '99999999-9999-4999-8999-00000000000a',
