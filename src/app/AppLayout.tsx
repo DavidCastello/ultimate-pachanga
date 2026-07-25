@@ -7,10 +7,19 @@ import {
   Menu,
   Settings,
   Shield,
+  ShieldCheck,
+  UserCog,
   Users,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Sheet,
   SheetContent,
@@ -35,35 +44,75 @@ const NAVIGATION: NavigationItem[] = [
   { to: '/players', label: 'Jugadores', icon: Users },
   { to: '/matches', label: 'Partidos', icon: CalendarDays },
   { to: '/rankings', label: 'Clasificaciones', icon: BarChart3 },
-  { to: '/admin/players', label: 'Gestión', icon: Settings, adminOnly: true },
 ]
 
-function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
+const ADMIN_NAVIGATION: NavigationItem[] = [
+  { to: '/admin/players', label: 'Gestionar jugadores', icon: Users },
+  { to: '/admin/members', label: 'Miembros', icon: UserCog },
+  { to: '/admin/settings', label: 'Ajustes de la liga', icon: Settings },
+]
+
+function navigationLinkClasses({ isActive }: { isActive: boolean }): string {
+  return cn(
+    'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+    isActive
+      ? 'bg-accent text-accent-foreground'
+      : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+  )
+}
+
+function NavigationLinks({
+  items,
+  onNavigate,
+}: {
+  items: readonly NavigationItem[]
+  onNavigate?: () => void
+}) {
   return (
     <>
-      {NAVIGATION.map(({ to, label, icon: Icon, adminOnly }) => {
-        const link = (
-          <NavLink
-            key={to}
-            to={to}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
-              )
-            }
-          >
-            <Icon className="size-4" aria-hidden="true" />
-            {label}
-          </NavLink>
-        )
-
-        return adminOnly ? <AdminOnly key={to}>{link}</AdminOnly> : link
-      })}
+      {items.map(({ to, label, icon: Icon }) => (
+        <NavLink
+          key={to}
+          to={to}
+          onClick={onNavigate}
+          className={navigationLinkClasses}
+        >
+          <Icon className="size-4" aria-hidden="true" />
+          {label}
+        </NavLink>
+      ))}
     </>
+  )
+}
+
+/**
+ * Admin destinations, collapsed into a menu on desktop so the main bar stays
+ * short. The mobile sheet lists them inline instead — a dropdown inside a
+ * slide-over is awkward on a phone.
+ */
+function AdminMenu() {
+  return (
+    <AdminOnly>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" className="text-muted-foreground">
+            <ShieldCheck className="size-4" aria-hidden="true" />
+            Administración
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuLabel>Administración</DropdownMenuLabel>
+          {ADMIN_NAVIGATION.map(({ to, label, icon: Icon }) => (
+            <DropdownMenuItem key={to} asChild>
+              <Link to={to}>
+                <Icon className="size-4" aria-hidden="true" />
+                {label}
+              </Link>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </AdminOnly>
   )
 }
 
@@ -102,10 +151,22 @@ export function AppLayout() {
                 <Menu className="size-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-4">
+            <SheetContent side="left" className="w-64 overflow-y-auto p-4">
               <SheetTitle className="mb-4 text-base">{APP_NAME}</SheetTitle>
               <nav className="flex flex-col gap-1">
-                <NavigationLinks onNavigate={() => setIsMenuOpen(false)} />
+                <NavigationLinks
+                  items={NAVIGATION}
+                  onNavigate={() => setIsMenuOpen(false)}
+                />
+                <AdminOnly>
+                  <p className="mt-4 px-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                    Administración
+                  </p>
+                  <NavigationLinks
+                    items={ADMIN_NAVIGATION}
+                    onNavigate={() => setIsMenuOpen(false)}
+                  />
+                </AdminOnly>
               </nav>
             </SheetContent>
           </Sheet>
@@ -120,7 +181,8 @@ export function AppLayout() {
           </Link>
 
           <nav className="ml-4 hidden items-center gap-1 md:flex">
-            <NavigationLinks />
+            <NavigationLinks items={NAVIGATION} />
+            <AdminMenu />
           </nav>
 
           <Button

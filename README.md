@@ -10,10 +10,9 @@ even though the interface shows one.
 
 ## Status
 
-**Stages 0–3 of 4 complete.** The full match workflow works end to end: create
-a match, pick the squad, download the score template, fill it in, upload it,
-preview what will change, and import — or correct an already-scored match by
-re-importing. Rankings and the admin settings pages come next.
+**The MVP is feature-complete locally.** Register and sign in, browse the roster
+as football cards, create matches and pick squads, score them by CSV, and read
+the rankings — with league settings and member management for administrators.
 
 | Stage | Scope                                                | State   |
 | ----- | ---------------------------------------------------- | ------- |
@@ -21,9 +20,13 @@ re-importing. Rankings and the admin settings pages come next.
 | 1     | Database schema, RLS, scoring functions, views, seed | ✅ Done |
 | 2     | Auth, routing, players and player cards              | ✅ Done |
 | 3     | Matches and CSV results import                       | ✅ Done |
-| 4     | Rankings, dashboard, admin settings                  | ⏳ Next |
+| 4     | Rankings, dashboard, admin settings, members         | ✅ Done |
 
-Tests: 112 frontend (Vitest), 90 database (pgTAP).
+Tests: 123 frontend (Vitest), 106 database (pgTAP). Verified in Chrome at 375 px:
+every page renders and nothing scrolls horizontally.
+
+Not yet done: deployment. The app runs against a local Supabase stack; pushing
+it to Supabase Cloud and Cloudflare Pages is the remaining step.
 
 ## Technology
 
@@ -199,10 +202,44 @@ scores, and unknown or repeated attributes are all refused.
 Templates are written with a UTF-8 byte order mark so Excel on Windows does not
 mangle accented names.
 
+## Roles
+
+The **first account to register becomes the administrator** of the league;
+everyone after that joins as a member. So register your own account before
+sharing the URL, and once everyone is in, disable public sign-up in Supabase.
+
+| Can                                         | Member | Admin |
+| ------------------------------------------- | :----: | :---: |
+| View the league, players, matches, rankings |   ✅   |  ✅   |
+| Create, edit and deactivate players         |   —    |  ✅   |
+| Upload player photographs                   |   —    |  ✅   |
+| Create and edit matches, pick squads        |   —    |  ✅   |
+| Download templates and import results       |   —    |  ✅   |
+| Change league settings                      |   —    |  ✅   |
+| Manage members and roles                    |   —    |  ✅   |
+
+Every one of those restrictions is an RLS policy, not a hidden button, and each
+is covered by a pgTAP test. A league can never be left without an administrator:
+the database refuses the last one's demotion or removal.
+
 ## Deployment
 
 Not yet configured. The target is Cloudflare Pages for the frontend
 (`npm run build` → `dist`) and Supabase for the database, auth and storage.
+
+The production checklist, when you get there:
+
+1. Create a Supabase project in a European region and save the database
+   password.
+2. `npx supabase link --project-ref <ref>` then `npx supabase db push`. Never
+   `db reset --linked` — it destroys the remote schema.
+3. Set the Site URL and redirect URLs to the Pages domain.
+4. Point Cloudflare Pages at this repository: build `npm run build`, output
+   `dist`.
+5. Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` and `VITE_APP_NAME`
+   as Pages environment variables.
+6. Register your own account first and confirm it is the administrator, then
+   share the URL and disable public sign-up.
 
 ## Contributing
 

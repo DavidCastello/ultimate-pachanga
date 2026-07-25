@@ -535,6 +535,17 @@ export type Database = {
       }
       is_league_admin: { Args: { p_league_id: string }; Returns: boolean }
       is_league_member: { Args: { p_league_id: string }; Returns: boolean }
+      list_league_members: {
+        Args: { p_league_id: string }
+        Returns: {
+          email: string
+          is_self: boolean
+          joined_at: string
+          member_id: string
+          role: Database["public"]["Enums"]["member_role"]
+          user_id: string
+        }[]
+      }
       match_league_id: { Args: { p_match_id: string }; Returns: string }
       score_league_id: { Args: { p_score_id: string }; Returns: string }
       to_card_stat: { Args: { p_average: number }; Returns: number }

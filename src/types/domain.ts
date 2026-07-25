@@ -12,6 +12,7 @@ import type { Database } from '@/types/database'
 export type PlayerPosition = Database['public']['Enums']['player_position']
 export type MatchStatus = Database['public']['Enums']['match_status']
 export type MemberRole = Database['public']['Enums']['member_role']
+export type LeagueStatus = Database['public']['Enums']['league_status']
 export type TeamSide = Database['public']['Enums']['team_side']
 export type AttendanceStatus = Database['public']['Enums']['attendance_status']
 
