@@ -26,10 +26,16 @@ function readEnvironment() {
       .map((issue) => `  - ${issue.message}`)
       .join('\n')
 
+    // Vite inlines VITE_* at build time, so a deployed page that reaches here
+    // was built without them — the values are missing from the build, not from
+    // the server. On Cloudflare that means the Worker's build variables rather
+    // than its runtime ones, which is not where you look first.
     throw new Error(
       `Invalid environment configuration:\n${problems}\n\n` +
-        'Copy .env.example to .env.local and fill it in with the values from ' +
-        '`npm run db:status`.',
+        'Locally: copy .env.example to .env.local and fill it in from ' +
+        '`npm run db:status`.\n' +
+        'Deployed: set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY as ' +
+        'build variables and deploy again.',
     )
   }
 
