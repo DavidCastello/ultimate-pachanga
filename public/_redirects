@@ -1,9 +1,0 @@
-# Cloudflare Pages: serve the app for any path it does not recognise as a file.
-#
-# Routing happens in the browser (React Router), so /rankings and /players/<id>
-# are not files on disk. Without this rule Pages answers 404 for every one of
-# them — the app works only if you land on / and never reload, which is the kind
-# of break that shows up after deploying rather than before.
-#
-# 200 rather than a redirect: the URL has to survive so the router can read it.
-/*  /index.html  200

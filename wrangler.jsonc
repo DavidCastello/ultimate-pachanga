@@ -1,0 +1,23 @@
+{
+  // Cloudflare Workers, serving `dist/` as static assets. There is no Worker
+  // code: the browser talks to Supabase directly, so nothing needs to run on
+  // Cloudflare's side.
+  "name": "ultimate-pachanga",
+  "compatibility_date": "2026-07-26",
+
+  "assets": {
+    "directory": "./dist",
+
+    // Routing happens in the browser (React Router), so /rankings and
+    // /players/<id> are not files on disk. Without this, every one of them
+    // answers 404 — the app works only if you land on / and never reload.
+    //
+    // This replaces the `_redirects` file Pages used. Workers rejects the
+    // equivalent rule there (`/*  /index.html  200`) as an infinite loop,
+    // because its asset resolver strips `/index` and `.html` and so matches
+    // the rule again. Same intent, expressed where Workers can honour it: any
+    // path that is not an asset gets index.html, with a 200 so the URL
+    // survives for the router to read.
+    "not_found_handling": "single-page-application",
+  },
+}

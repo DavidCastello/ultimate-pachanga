@@ -35,8 +35,8 @@ yourself up for a match — are covered by tests but have not had that manual pa
 yet.
 
 The database is deployed. The schema, the 22 players, the four played matches
-and all 59 scores are live on Supabase; the frontend on Cloudflare Pages is the
-remaining step.
+and all 59 scores are live on Supabase; the frontend on Cloudflare Workers is
+the remaining step.
 
 ## Technology
 
@@ -505,27 +505,35 @@ frontend (`npm run build` → `dist`). The database half is done.
 Steps 7 and 8, and everything else about running the database, are covered in
 [`supabase/README.md`](supabase/README.md).
 
-### Cloudflare Pages
+### Cloudflare Workers
 
 Chosen over GitHub Pages for one concrete reason: routing happens in the
-browser, so `/rankings` is not a file on disk. Cloudflare honours
-[`public/_redirects`](public/_redirects) and serves the app for any unknown
-path with a 200. GitHub Pages has no equivalent — it would need a `404.html`
-copy of `index.html`, plus a `base` and a router `basename` for the
-`/ultimate-pachanga` subpath. Two workarounds to reach where this repo already
-is. Cloudflare also gives a preview URL per pull request, and neither charges
-anything at this size.
+browser, so `/rankings` is not a file on disk. Cloudflare serves the app for
+any unknown path with a 200, so a deep link survives a reload. GitHub Pages has
+no equivalent — it would need a `404.html` copy of `index.html`, plus a `base`
+and a router `basename` for the `/ultimate-pachanga` subpath. Cloudflare also
+gives a preview URL per pull request, and neither charges anything at this size.
 
-**Workers & Pages → Create → Pages → Connect to Git**, authorise the repository,
+**Workers & Pages → Create → Import a repository**, authorise this repository,
 then:
 
-| Setting           | Value           |
-| ----------------- | --------------- |
-| Production branch | `main`          |
-| Framework preset  | Vite            |
-| Build command     | `npm run build` |
-| Build output      | `dist`          |
-| Root directory    | _(blank)_       |
+| Setting           | Value                 |
+| ----------------- | --------------------- |
+| Production branch | `main`                |
+| Build command     | `npm run build`       |
+| Deploy command    | `npx wrangler deploy` |
+| Root directory    | _(blank)_             |
+
+Everything else is in [`wrangler.jsonc`](wrangler.jsonc): `dist/` is served as
+static assets, with `not_found_handling: "single-page-application"` for the
+routing. No Worker code runs — the browser talks to Supabase directly.
+
+> There is no `_redirects` file, and adding one back will fail the deploy.
+> That is the Pages way of doing this, and Workers rejects its central rule
+> (`/*  /index.html  200`) as an infinite loop: the asset resolver strips
+> `/index` and `.html`, which matches the rule again. The error names the line
+> in `_redirects` rather than the platform difference, which is not an obvious
+> read at midnight.
 
 Add three variables, **to Production and Preview both** — a preview that builds
 without them fails at runtime with an unhelpful blank page:
@@ -543,8 +551,14 @@ Node comes from [`.nvmrc`](.nvmrc). If a build picks the wrong version anyway,
 add `NODE_VERSION=22` alongside the variables above.
 
 Every push to `main` then deploys, and every pull request gets its own URL.
-Both point at the **same production database** — Pages previews are not a
-separate environment, and there is only one Supabase project.
+Both point at the **same production database** — a preview is a second frontend
+over the real league, not a sandbox. For that, `make dev-local`.
+
+To check the configuration without deploying:
+
+```bash
+npx wrangler deploy --dry-run     # needs Node 22; `nvm use` first
+```
 
 ### Loading the real league
 
