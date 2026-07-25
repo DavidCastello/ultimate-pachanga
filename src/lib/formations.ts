@@ -34,16 +34,28 @@ export const SQUAD_SIZE = 7
 export const GOALKEEPER_SLOT = 0
 
 /**
- * Vertical band the outfield lines are spread across, as percentages.
+ * Card size and vertical layout.
  *
- * Stops short of both ends: the goalkeeper needs the space behind, and a card
- * sitting on the very top edge would be clipped.
+ * These are one system, not independent knobs. Cards are portrait, so their
+ * width sets their height, and four rows of them have to fit between the top of
+ * the pitch and the goal line without touching or being clipped.
+ *
+ * With a card 18% of the pitch wide it stands 22.5% tall (4:5 over a 4:5
+ * pitch), which leaves roughly two percent of clearance between rows. Enlarging
+ * the card without moving these bands is what put the goalkeeper through the
+ * bottom edge, so `formations.test.ts` asserts the arithmetic instead of
+ * trusting it.
  */
-const OUTFIELD_TOP = 20
-const OUTFIELD_BOTTOM = 68
+export const CARD_WIDTH_PERCENT = 18
+
+/** Card height as a percentage of pitch height, from the 4:5 card on a 4:5 pitch. */
+export const CARD_HEIGHT_PERCENT = CARD_WIDTH_PERCENT * 1.25
+
+const OUTFIELD_TOP = 13
+const OUTFIELD_BOTTOM = 61
 
 /** The goalkeeper sits between the outfielders and their own goal line. */
-const GOALKEEPER_Y = 87
+const GOALKEEPER_Y = 86
 
 /** Horizontal band a line of players is spread across. */
 const LINE_LEFT = 20

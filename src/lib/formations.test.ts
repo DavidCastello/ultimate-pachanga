@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  CARD_HEIGHT_PERCENT,
+  CARD_WIDTH_PERCENT,
   DEFAULT_FORMATION,
   FORMATIONS,
   GOALKEEPER_SLOT,
@@ -128,6 +130,74 @@ describe('formations', () => {
     const spots = getPitchSlots(formation).map((slot) => `${slot.x},${slot.y}`)
     expect(new Set(spots).size).toBe(spots.length)
   })
+})
+
+/**
+ * The card is portrait and four rows of them have to share the pitch, so the
+ * sizes and the line depths only work as a set. Enlarging the card once pushed
+ * the goalkeeper straight through the bottom edge; these assertions are here so
+ * that fails a test rather than shipping.
+ */
+describe('cards fit the pitch', () => {
+  const halfHeight = CARD_HEIGHT_PERCENT / 2
+  const halfWidth = CARD_WIDTH_PERCENT / 2
+
+  it('is a portrait card', () => {
+    expect(CARD_HEIGHT_PERCENT).toBeGreaterThan(CARD_WIDTH_PERCENT)
+  })
+
+  it.each(FORMATIONS)('%s never clips a card off the pitch', (formation) => {
+    for (const slot of getPitchSlots(formation)) {
+      expect(slot.y - halfHeight).toBeGreaterThanOrEqual(0)
+      expect(slot.y + halfHeight).toBeLessThanOrEqual(100)
+      expect(slot.x - halfWidth).toBeGreaterThanOrEqual(0)
+      expect(slot.x + halfWidth).toBeLessThanOrEqual(100)
+    }
+  })
+
+  it.each(FORMATIONS)('%s keeps clear space between rows', (formation) => {
+    const depths = [
+      ...new Set(getPitchSlots(formation).map((slot) => slot.y)),
+    ].sort((left, right) => left - right)
+
+    for (let index = 1; index < depths.length; index += 1) {
+      const gap = depths[index] - depths[index - 1]
+      expect(gap).toBeGreaterThan(CARD_HEIGHT_PERCENT)
+    }
+  })
+
+  it.each(FORMATIONS)('%s keeps clear space within a row', (formation) => {
+    const slots = getPitchSlots(formation)
+    const byDepth = new Map<number, number[]>()
+
+    for (const slot of slots) {
+      byDepth.set(slot.y, [...(byDepth.get(slot.y) ?? []), slot.x])
+    }
+
+    for (const positions of byDepth.values()) {
+      const sorted = [...positions].sort((left, right) => left - right)
+      for (let index = 1; index < sorted.length; index += 1) {
+        expect(sorted[index] - sorted[index - 1]).toBeGreaterThan(
+          CARD_WIDTH_PERCENT,
+        )
+      }
+    }
+  })
+
+  it.each(FORMATIONS)(
+    '%s leaves the goalkeeper clear of the defence',
+    (formation) => {
+      const slots = getPitchSlots(formation)
+      const keeper = slots.find((slot) => slot.isGoalkeeper)!
+      const deepestOutfielder = Math.max(
+        ...slots.filter((slot) => !slot.isGoalkeeper).map((slot) => slot.y),
+      )
+
+      expect(keeper.y - halfHeight).toBeGreaterThan(
+        deepestOutfielder + halfHeight,
+      )
+    },
+  )
 })
 
 describe('describeSlot', () => {

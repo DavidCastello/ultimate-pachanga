@@ -9,18 +9,35 @@ import { toCardTier, type CardTier } from '@/lib/scoring'
 import type { LeagueMetricRow, PlayerCardData } from '@/types/domain'
 
 /**
- * Tier styling.
+ * The player card, in two sizes.
  *
- * An original design in the spirit of football card games — no third-party
- * templates, crests or trademarks. Gradients are built from the tier tokens in
- * index.css so light and dark both work.
+ * `full` is the grid and detail card; `compact` is the one that stands on the
+ * pitch. They deliberately share one visual language — same tier face, same
+ * edge, same rating-over-position block beside the photograph — so that the
+ * pitch reads as the same game as the squad list. Compact simply drops the
+ * metric row and the footer, which are illegible at seven-to-a-pitch.
+ *
+ * An original design in the spirit of football card games: no third-party
+ * templates, crests or trademarks.
  */
-const TIER_STYLES: Record<CardTier, string> = {
-  gold: 'from-tier-gold/25 via-tier-gold/10 to-tier-gold-dim/20 border-tier-gold/45',
-  silver:
-    'from-tier-silver/25 via-tier-silver/10 to-tier-silver-dim/20 border-tier-silver/45',
-  bronze:
-    'from-tier-bronze/25 via-tier-bronze/10 to-tier-bronze-dim/20 border-tier-bronze/45',
+
+/**
+ * Card faces are opaque, never tinted alpha over whatever is behind.
+ *
+ * The compact card sits on a photograph of a floodlit pitch; letting that show
+ * through turned the rating into noise.
+ */
+const TIER_FACES: Record<CardTier, string> = {
+  gold: 'from-tier-gold-face to-tier-gold-face-deep',
+  silver: 'from-tier-silver-face to-tier-silver-face-deep',
+  bronze: 'from-tier-bronze-face to-tier-bronze-face-deep',
+}
+
+/** The bright metal edge that gives the card its contour. */
+const TIER_EDGES: Record<CardTier, string> = {
+  gold: 'border-tier-gold/70',
+  silver: 'border-tier-silver/70',
+  bronze: 'border-tier-bronze/70',
 }
 
 const TIER_ACCENTS: Record<CardTier, string> = {
@@ -28,6 +45,23 @@ const TIER_ACCENTS: Record<CardTier, string> = {
   silver: 'text-tier-silver',
   bronze: 'text-tier-bronze',
 }
+
+/** Hairlines separating the card's bands, in the tier's own metal. */
+const TIER_RULES: Record<CardTier, string> = {
+  gold: 'border-tier-gold/25',
+  silver: 'border-tier-silver/25',
+  bronze: 'border-tier-bronze/25',
+}
+
+/**
+ * The contour: a bright inner hairline over a dark outer ring.
+ *
+ * Two edges rather than one thick border, which is what separates a card from
+ * both a pale grid background and a dark pitch without needing a different
+ * treatment for each.
+ */
+const CARD_EDGE =
+  'border bg-gradient-to-b shadow-[inset_0_1px_0_oklch(1_0_0/0.22),inset_0_-1px_0_oklch(0_0_0/0.25),0_2px_10px_oklch(0_0_0/0.45)]'
 
 /** Short labels: a card has no room for "Mediocentro defensivo". */
 function toShortMetricLabel(metric: LeagueMetricRow): string {
@@ -39,11 +73,7 @@ interface PlayerCardProps {
   metrics: readonly LeagueMetricRow[]
   /** Renders the whole card as a link to the player's detail page. */
   linkTo?: string
-  /**
-   * Compact form for the pitch view, where seven cards share one pitch. Keeps
-   * the rating, tier and face — what identifies a player at a glance — and drops
-   * the metric grid and footer, which are unreadable at that size anyway.
-   */
+  /** The smaller card used on the pitch. */
   compact?: boolean
   className?: string
 }
@@ -58,78 +88,73 @@ export function PlayerCard({
   const tier = toCardTier(player.cardRating)
   const avatarUrl = getAvatarUrl(player.avatarPath)
 
-  const card = compact ? (
+  const initials = toInitials(
+    player.firstName,
+    player.lastName,
+    player.displayName,
+  )
+
+  const card = (
     <article
       data-testid="player-card"
       data-tier={tier}
-      data-compact="true"
+      data-compact={compact ? 'true' : undefined}
       className={cn(
-        'relative flex w-full flex-col items-center gap-0.5 overflow-hidden rounded-lg border bg-card/90 bg-gradient-to-br px-1 pt-1 pb-1.5 text-center shadow-lg backdrop-blur-sm',
-        TIER_STYLES[tier],
+        'relative flex flex-col overflow-hidden',
+        CARD_EDGE,
+        TIER_FACES[tier],
+        TIER_EDGES[tier],
+        // Portrait, like a printed card. The pitch card is sized by its slot,
+        // so it needs the ratio declared; the grid card gets its height from
+        // the metric and value bands below.
+        compact ? 'aspect-[4/5] rounded-lg' : 'rounded-xl',
+        !compact &&
+          'transition-transform duration-200 motion-safe:hover:-translate-y-1',
         !player.isActive && 'opacity-60 saturate-50',
         className,
       )}
     >
-      <Avatar className="size-9 border border-background/50">
-        {avatarUrl ? (
-          <AvatarImage
-            src={avatarUrl}
-            alt=""
-            className="object-cover"
-            loading="lazy"
-          />
-        ) : null}
-        <AvatarFallback className="bg-background/70 text-[0.625rem] font-bold">
-          {toInitials(player.firstName, player.lastName, player.displayName)}
-        </AvatarFallback>
-      </Avatar>
-
-      <span
+      {/* Rating and position ride in the corner rather than taking a column of
+          their own, which leaves the photograph the whole width. */}
+      <div
         className={cn(
-          'numeric text-sm leading-none font-black',
-          TIER_ACCENTS[tier],
+          'absolute z-10 flex flex-col items-center leading-none',
+          compact ? 'top-1 left-1.5' : 'top-2.5 left-3',
         )}
       >
-        {player.cardRating}
-      </span>
+        <span
+          className={cn(
+            'numeric font-black',
+            compact ? 'text-sm' : 'text-2xl',
+            TIER_ACCENTS[tier],
+          )}
+        >
+          {player.cardRating}
+        </span>
+        <span
+          className={cn(
+            'font-bold tracking-wider opacity-80',
+            compact ? 'text-[0.5rem]' : 'text-[0.625rem]',
+          )}
+        >
+          {player.preferredPosition}
+        </span>
+      </div>
 
-      <span
-        className="w-full truncate text-[0.6875rem] leading-tight font-semibold"
-        title={player.displayName}
+      {/* The photograph, given as much room as the card can spare. Initials
+          stand in until real faces are uploaded. */}
+      <div
+        className={cn(
+          'flex flex-1 items-center justify-center',
+          compact ? 'px-1 pt-1' : 'px-3 pt-3 pb-1',
+        )}
       >
-        {player.displayName}
-      </span>
-
-      <span className="text-[0.5625rem] leading-none font-bold tracking-wider text-muted-foreground">
-        {player.preferredPosition}
-      </span>
-    </article>
-  ) : (
-    <article
-      data-testid="player-card"
-      data-tier={tier}
-      className={cn(
-        'group relative flex flex-col overflow-hidden rounded-xl border bg-card bg-gradient-to-br',
-        'transition-transform duration-200 motion-safe:hover:-translate-y-1',
-        TIER_STYLES[tier],
-        !player.isActive && 'opacity-60 saturate-50',
-        className,
-      )}
-    >
-      <div className="flex items-start gap-3 p-4 pb-2">
-        {/* Rating and position, the way cards stack them at top left. */}
-        <div className="flex shrink-0 flex-col items-center leading-none">
-          <span
-            className={cn('numeric text-4xl font-black', TIER_ACCENTS[tier])}
-          >
-            {player.cardRating}
-          </span>
-          <span className="mt-1 text-xs font-bold tracking-widest text-muted-foreground">
-            {player.preferredPosition}
-          </span>
-        </div>
-
-        <Avatar className="size-16 shrink-0 border-2 border-background/50">
+        <Avatar
+          className={cn(
+            'aspect-square h-auto border border-black/25',
+            compact ? 'w-[62%]' : 'w-[64%] border-2',
+          )}
+        >
           {avatarUrl ? (
             <AvatarImage
               src={avatarUrl}
@@ -138,41 +163,75 @@ export function PlayerCard({
               loading="lazy"
             />
           ) : null}
-          <AvatarFallback className="bg-background/60 text-lg font-bold">
-            {toInitials(player.firstName, player.lastName, player.displayName)}
+          <AvatarFallback
+            className={cn(
+              'bg-black/25 font-bold',
+              compact ? 'text-xs' : 'text-2xl',
+            )}
+          >
+            {initials}
           </AvatarFallback>
         </Avatar>
       </div>
 
-      <div className="px-4">
-        <h3 className="truncate text-base font-bold" title={player.displayName}>
+      {/* The name band, ruled off the way a card prints it. */}
+      <div
+        className={cn(
+          'border-t text-center',
+          TIER_RULES[tier],
+          compact ? 'px-1 py-0.5' : 'px-3 py-1.5',
+        )}
+      >
+        <h3
+          className={cn(
+            'truncate font-bold',
+            compact ? 'text-[0.625rem] leading-tight' : 'text-sm',
+          )}
+          title={player.displayName}
+        >
           {player.displayName}
         </h3>
-        <p className="truncate text-xs text-muted-foreground">
-          {formatPosition(player.preferredPosition)}
-        </p>
+        {!compact ? (
+          <p className="truncate text-[0.6875rem] opacity-70">
+            {formatPosition(player.preferredPosition)}
+          </p>
+        ) : null}
       </div>
 
-      <div className="mt-3 grid grid-cols-4 gap-1 border-t border-border/40 px-2 py-3">
-        {metrics.map((metric) => (
-          <MetricBadge
-            key={metric.code}
-            label={toShortMetricLabel(metric)}
-            value={player.metricCardStats[metric.code] ?? null}
-          />
-        ))}
-      </div>
+      {!compact ? (
+        <>
+          <div
+            className={cn(
+              'grid grid-cols-4 gap-1 border-t px-2 py-2',
+              TIER_RULES[tier],
+            )}
+          >
+            {metrics.map((metric) => (
+              <MetricBadge
+                key={metric.code}
+                label={toShortMetricLabel(metric)}
+                value={player.metricCardStats[metric.code] ?? null}
+              />
+            ))}
+          </div>
 
-      <div className="flex items-center justify-between border-t border-border/40 px-4 py-2.5 text-xs">
-        <MarketValue value={player.marketValueGbp} className="text-sm" />
-        <span className="numeric text-muted-foreground">
-          {player.matchesPlayed}{' '}
-          {player.matchesPlayed === 1 ? 'partido' : 'partidos'}
-        </span>
-      </div>
+          <div
+            className={cn(
+              'flex items-center justify-between border-t px-3 py-2 text-[0.6875rem]',
+              TIER_RULES[tier],
+            )}
+          >
+            <MarketValue value={player.marketValueGbp} className="text-xs" />
+            <span className="numeric opacity-70">
+              {player.matchesPlayed}{' '}
+              {player.matchesPlayed === 1 ? 'partido' : 'partidos'}
+            </span>
+          </div>
+        </>
+      ) : null}
 
-      {!player.isActive ? (
-        <span className="absolute top-2 right-2 rounded bg-muted px-1.5 py-0.5 text-[0.625rem] font-semibold text-muted-foreground uppercase">
+      {!player.isActive && !compact ? (
+        <span className="absolute top-2 right-2 rounded bg-black/40 px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase">
           Inactivo
         </span>
       ) : null}

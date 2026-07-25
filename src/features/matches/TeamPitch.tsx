@@ -1,6 +1,11 @@
 import { PlayerCard } from '@/components/PlayerCard'
 import { cn } from '@/lib/utils'
-import { describeSlot, getPitchSlots, type Formation } from '@/lib/formations'
+import {
+  CARD_WIDTH_PERCENT,
+  describeSlot,
+  getPitchSlots,
+  type Formation,
+} from '@/lib/formations'
 import type { LeagueMetricRow, PlayerCardData } from '@/types/domain'
 
 /**
@@ -13,9 +18,6 @@ import type { LeagueMetricRow, PlayerCardData } from '@/types/domain'
  * Cards are placed by percentage over the image, so the whole thing scales with
  * its container and needs no breakpoint-specific coordinates.
  */
-
-/** Width of a card as a percentage of the pitch, tuned so lines of three fit. */
-const CARD_WIDTH = 26
 
 export interface PitchAssignment {
   slot: number
@@ -77,6 +79,8 @@ export function TeamPitch({
         const player = bySlot.get(slot.slot) ?? null
         const key = slotKey(slot.slot)
         const isSelected = selectedKey === key
+        const isCandidate =
+          interactive && selectedKey !== null && selectedKey !== key
         const isDragging = draggingKey === key
         const isOver = overKey === key && draggingKey !== key
         const label = describeSlot(formation, slot.slot)
@@ -92,7 +96,7 @@ export function TeamPitch({
             style={{
               left: `${slot.x}%`,
               top: `${slot.y}%`,
-              width: `${CARD_WIDTH}%`,
+              width: `${CARD_WIDTH_PERCENT}%`,
               transform: 'translate(-50%, -50%)',
             }}
           >
@@ -112,6 +116,9 @@ export function TeamPitch({
                   interactive &&
                     'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
                   isSelected && 'ring-2 ring-primary ring-offset-2',
+                  // Everything else becomes a visible target, so the second tap
+                  // is an obvious move rather than a guess.
+                  isCandidate && 'ring-1 ring-primary/50',
                   // The original stays put but recedes while dragging, so the
                   // pitch never looks like it lost a player.
                   isDragging && 'opacity-30',
@@ -131,10 +138,13 @@ export function TeamPitch({
                     : `${label}: vacío`
                 }
                 className={cn(
-                  'flex h-20 items-center justify-center rounded-lg border border-dashed border-white/30 bg-black/25 text-center text-[0.5625rem] leading-tight font-medium text-white/70 backdrop-blur-sm',
+                  // Same footprint as a card, so an empty position reads as a
+                  // gap in the formation rather than a smaller thing.
+                  'flex aspect-[4/5] items-center justify-center rounded-lg border border-dashed border-white/30 bg-black/40 text-center text-[0.5625rem] leading-tight font-medium text-white/70',
                   interactive && 'cursor-pointer touch-none select-none',
                   interactive &&
                     'focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none',
+                  isCandidate && 'border-primary/70 bg-primary/25 text-white',
                   isOver && 'ring-2 ring-tier-gold',
                 )}
                 {...(interactive ? getHandlers(key) : {})}

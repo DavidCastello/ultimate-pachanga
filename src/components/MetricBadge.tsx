@@ -14,10 +14,11 @@ interface MetricBadgeProps {
 export function MetricBadge({ label, value, className }: MetricBadgeProps) {
   return (
     <div className={cn('flex flex-col items-center leading-none', className)}>
-      <span className="text-[0.625rem] font-medium tracking-wider uppercase opacity-70">
+      <span className="text-[0.5625rem] font-medium tracking-wider uppercase opacity-70">
         {label}
       </span>
-      <span className="numeric text-lg font-bold">{value ?? '—'}</span>
+      {/* Kept compact so the photograph above gets the card's space. */}
+      <span className="numeric mt-0.5 text-sm font-bold">{value ?? '—'}</span>
     </div>
   )
 }

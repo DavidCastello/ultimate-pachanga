@@ -211,6 +211,63 @@ describe('PitchLineups', () => {
     })
   })
 
+  describe('guiding the selection', () => {
+    it('explains what to do next once a player is picked', async () => {
+      const user = userEvent.setup()
+      renderLineups()
+
+      expect(screen.getByText(/Toca un jugador y luego otro/)).toBeVisible()
+
+      await user.click(screen.getByLabelText(/^Defensa Uno,/))
+
+      const banner = screen.getByRole('status')
+      expect(banner).toHaveTextContent('Defensa Uno')
+      expect(banner).toHaveTextContent(/Toca otro jugador o una posición libre/)
+    })
+
+    it('offers a way out of a selection', async () => {
+      const user = userEvent.setup()
+      const { onLineupChange } = renderLineups()
+
+      await user.click(screen.getByLabelText(/^Defensa Uno,/))
+      await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+      expect(screen.getByText(/Toca un jugador y luego otro/)).toBeVisible()
+      expect(onLineupChange).not.toHaveBeenCalled()
+    })
+
+    it('marks the other positions as targets', async () => {
+      const user = userEvent.setup()
+      renderLineups()
+
+      const other = screen.getByLabelText(/^Defensa Dos,/)
+      expect(other.className).not.toContain('ring-primary/50')
+
+      await user.click(screen.getByLabelText(/^Defensa Uno,/))
+
+      expect(other.className).toContain('ring-primary/50')
+      // The selected card is marked differently from the targets.
+      expect(screen.getByLabelText(/^Defensa Uno,/).className).toContain(
+        'ring-offset-2',
+      )
+    })
+
+    it('says so when an empty position is the one selected', async () => {
+      const user = userEvent.setup()
+      renderLineups()
+
+      const emptySlot = screen
+        .getAllByTestId('pitch-slot')
+        .find((slot) => slot.dataset.slotKey === 'away:6')!
+      await user.click(within(emptySlot).getByRole('button'))
+
+      expect(screen.getByRole('status')).toHaveTextContent(
+        /Posición vacía seleccionada/,
+      )
+    })
+  })
+
   describe('keyboard', () => {
     it('selects and swaps with Enter', async () => {
       const user = userEvent.setup()

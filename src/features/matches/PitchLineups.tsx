@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { Info } from 'lucide-react'
+import { Info, MousePointerClick } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -195,14 +196,49 @@ export function PitchLineups({
     ? playersById.get(placement.get(swapping.drag.key) ?? '')
     : undefined
 
+  const selectedPlayer = swapping.selectedKey
+    ? playersById.get(placement.get(swapping.selectedKey) ?? '')
+    : undefined
+
   return (
     <div ref={containerRef} className="flex flex-col gap-4">
       {interactive ? (
-        <p className="flex items-start gap-2 text-xs text-muted-foreground">
-          <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-          Arrastra un jugador sobre otro para intercambiarlos, o toca uno y
-          luego el otro. Funciona entre equipos y con el banquillo.
-        </p>
+        // While something is selected this replaces the instructions with what
+        // to do next. Tapping twice is the whole interaction, and saying so at
+        // the moment it matters beats a tip nobody reads up front.
+        swapping.selectedKey ? (
+          <div
+            role="status"
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 p-2 text-xs"
+          >
+            <MousePointerClick className="size-4 shrink-0" aria-hidden="true" />
+            <span>
+              {selectedPlayer ? (
+                <>
+                  <strong>{selectedPlayer.displayName}</strong> seleccionado.
+                </>
+              ) : (
+                <>Posición vacía seleccionada.</>
+              )}{' '}
+              Toca otro jugador o una posición libre para intercambiar.
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="ml-auto h-7"
+              onClick={swapping.clearSelection}
+            >
+              Cancelar
+            </Button>
+          </div>
+        ) : (
+          <p className="flex items-start gap-2 text-xs text-muted-foreground">
+            <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+            Toca un jugador y luego otro para intercambiarlos, o arrástralo
+            encima. Funciona entre equipos y con el banquillo.
+          </p>
+        )
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">

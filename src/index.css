@@ -55,6 +55,15 @@
   --color-tier-bronze: var(--tier-bronze);
   --color-tier-bronze-dim: var(--tier-bronze-dim);
 
+  /* Opaque card faces. A player card must never let the page — or the pitch
+     photograph behind it — show through, or the rating becomes unreadable. */
+  --color-tier-gold-face: var(--tier-gold-face);
+  --color-tier-gold-face-deep: var(--tier-gold-face-deep);
+  --color-tier-silver-face: var(--tier-silver-face);
+  --color-tier-silver-face-deep: var(--tier-silver-face-deep);
+  --color-tier-bronze-face: var(--tier-bronze-face);
+  --color-tier-bronze-face-deep: var(--tier-bronze-face-deep);
+
   /* Attribute badges — sign of league_attributes.points */
   --color-attribute-positive: var(--attribute-positive);
   --color-attribute-negative: var(--attribute-negative);
@@ -111,6 +120,15 @@
   --tier-silver-dim: oklch(0.58 0.012 250);
   --tier-bronze: oklch(0.66 0.11 55);
   --tier-bronze-dim: oklch(0.46 0.09 48);
+
+  /* Light theme keeps the metal bright, so the face is a pale tint and the
+     text on it stays dark. */
+  --tier-gold-face: oklch(0.93 0.07 90);
+  --tier-gold-face-deep: oklch(0.83 0.11 82);
+  --tier-silver-face: oklch(0.94 0.008 250);
+  --tier-silver-face-deep: oklch(0.85 0.012 250);
+  --tier-bronze-face: oklch(0.9 0.05 58);
+  --tier-bronze-face-deep: oklch(0.78 0.09 50);
   --attribute-positive: oklch(0.55 0.15 148);
   --attribute-negative: oklch(0.55 0.19 25);
 }
@@ -155,6 +173,15 @@
   --tier-silver-dim: oklch(0.5 0.012 250);
   --tier-bronze: oklch(0.72 0.12 55);
   --tier-bronze-dim: oklch(0.4 0.09 46);
+
+  /* Dark theme: a deep metallic face, light enough to read white text on and
+     opaque enough to sit over the pitch photograph. */
+  --tier-gold-face: oklch(0.42 0.085 84);
+  --tier-gold-face-deep: oklch(0.25 0.055 72);
+  --tier-silver-face: oklch(0.4 0.012 250);
+  --tier-silver-face-deep: oklch(0.24 0.01 250);
+  --tier-bronze-face: oklch(0.38 0.07 52);
+  --tier-bronze-face-deep: oklch(0.23 0.05 44);
   --attribute-positive: oklch(0.78 0.17 148);
   --attribute-negative: oklch(0.7 0.2 25);
 }
