@@ -14,15 +14,22 @@
 CLOUD_ENV := .env.cloud.local
 LOCAL_ENV := .env.local
 
+# One-off data loads for the deployed database. Deliberately not migrations;
+# see supabase/production/README.md.
+PROD_DIR := supabase/production
+PROD_SCRIPTS := 01_roster 02_fixtures 03_results
+LOCAL_DB_CONTAINER := supabase_db_ultimate-pachanga
+
 .DEFAULT_GOAL := help
 
 .PHONY: help install dev dev-local build preview lint format check test \
         test-watch coverage db-start db-stop db-status db-reset db-test \
-        db-types verify
+        db-types verify prod-roster prod-fixtures prod-results prod-load \
+        prod-dry-run
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
-	  | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
+	  | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
 install: ## Install dependencies
 	npm install
@@ -109,3 +116,65 @@ db-test: ## Run the pgTAP tests
 
 db-types: ## Regenerate src/types/database.ts from the schema
 	npm run db:types
+
+# ---------------------------------------------------------------------------
+# Production data (one-off loads)
+#
+# The real roster, fixtures and results. Run once, in order, against the
+# deployed database. Everything here needs PROD_DB_URL — the database
+# connection string, password included — which is a full-access credential and
+# belongs in the shell, never in a file git tracks or a VITE_ variable.
+#
+# ON_ERROR_STOP is what makes these safe to chain: without it psql would carry
+# on past a failed statement and report success.
+# ---------------------------------------------------------------------------
+
+define require_prod_db_url
+	@test -n "$(PROD_DB_URL)" || { \
+	  echo "PROD_DB_URL is not set."; \
+	  echo ""; \
+	  echo "Take the connection string from the Supabase dashboard under"; \
+	  echo "Project Settings > Database > Connection string > psql, then:"; \
+	  echo "  export PROD_DB_URL='postgresql://...'"; \
+	  echo ""; \
+	  echo "Rehearsing against the local stack instead? Use 'make prod-dry-run'."; \
+	  exit 1; \
+	}
+	@command -v psql >/dev/null || { \
+	  echo "psql is not installed. On macOS:"; \
+	  echo "  brew install libpq"; \
+	  echo "  export PATH=\"/opt/homebrew/opt/libpq/bin:\$$PATH\""; \
+	  exit 1; \
+	}
+endef
+
+prod-roster: ## Load the real roster into the deployed database
+	$(require_prod_db_url)
+	psql "$(PROD_DB_URL)" -v ON_ERROR_STOP=1 -f $(PROD_DIR)/01_roster.sql
+
+prod-fixtures: ## Load the real matches and squads
+	$(require_prod_db_url)
+	psql "$(PROD_DB_URL)" -v ON_ERROR_STOP=1 -f $(PROD_DIR)/02_fixtures.sql
+
+# Requires the owner account to have registered: importing results goes through
+# import_match_scores, which only administrators may call.
+prod-results: ## Import the real match results
+	$(require_prod_db_url)
+	psql "$(PROD_DB_URL)" -v ON_ERROR_STOP=1 -f $(PROD_DIR)/03_results.sql
+
+prod-load: prod-roster prod-fixtures prod-results ## All three, in order
+
+# Talks to the local container directly, so no psql and no PROD_DB_URL. Leaves
+# the local database holding the dev seed *and* the real league; 'make db-reset'
+# puts it back.
+prod-dry-run: ## Rehearse the production load against the local stack
+	@docker ps --format '{{.Names}}' | grep -qx $(LOCAL_DB_CONTAINER) || { \
+	  echo "The local stack is not running. Start it with 'make db-start'."; \
+	  exit 1; \
+	}
+	@for script in $(PROD_SCRIPTS); do \
+	  echo "==> $$script"; \
+	  docker exec -i $(LOCAL_DB_CONTAINER) \
+	    psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - \
+	    < $(PROD_DIR)/$$script.sql || exit 1; \
+	done

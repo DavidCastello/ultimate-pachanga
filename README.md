@@ -31,7 +31,9 @@ stage 5 and 6 changes — joining, the profile page, and the reworked scoring �
 are covered by tests but have not had that manual pass yet.
 
 Not yet done: deployment. The app runs against a local Supabase stack; pushing
-it to Supabase Cloud and Cloudflare Pages is the remaining step.
+it to Supabase Cloud and Cloudflare Pages is the remaining step. The real
+league's data is transcribed and rehearsed in `supabase/production/`, waiting
+for a project to load it into.
 
 ## Technology
 
@@ -123,30 +125,39 @@ one does.
 
 ## Commands
 
-`make` with no target lists these. Every one delegates to the `npm run` script
-of the same name, which still works if you prefer it.
+`make` with no target lists these. Everything except the `prod-` targets
+delegates to the `npm run` script of the same name, which still works if you
+prefer it.
 
-| Command           | Purpose                                            |
-| ----------------- | -------------------------------------------------- |
-| `make dev-local`  | Dev server against the local stack                 |
-| `make dev`        | Dev server against the deployed database           |
-| `make build`      | Type-check and build to `dist/`                    |
-| `make preview`    | Serve the production build locally                 |
-| `make lint`       | ESLint                                             |
-| `make format`     | Prettier, writing changes                          |
-| `make check`      | Prettier and ESLint, check only (what CI runs)     |
-| `make test`       | Vitest once                                        |
-| `make test-watch` | Vitest in watch mode                               |
-| `make coverage`   | Vitest with coverage                               |
-| `make verify`     | Check, both test suites and the build              |
-| `make db-start`   | Start the local Supabase stack                     |
-| `make db-stop`    | Stop it                                            |
-| `make db-status`  | Print local URLs and keys                          |
-| `make db-reset`   | Recreate the database from migrations + `seed.sql` |
-| `make db-test`    | Run pgTAP tests in `supabase/tests/`               |
-| `make db-types`   | Regenerate `src/types/database.ts` from the schema |
+| Command              | Purpose                                              |
+| -------------------- | ---------------------------------------------------- |
+| `make dev-local`     | Dev server against the local stack                   |
+| `make dev`           | Dev server against the deployed database             |
+| `make build`         | Type-check and build to `dist/`                      |
+| `make preview`       | Serve the production build locally                   |
+| `make lint`          | ESLint                                               |
+| `make format`        | Prettier, writing changes                            |
+| `make check`         | Prettier and ESLint, check only (what CI runs)       |
+| `make test`          | Vitest once                                          |
+| `make test-watch`    | Vitest in watch mode                                 |
+| `make coverage`      | Vitest with coverage                                 |
+| `make verify`        | Check, both test suites and the build                |
+| `make db-start`      | Start the local Supabase stack                       |
+| `make db-stop`       | Stop it                                              |
+| `make db-status`     | Print local URLs and keys                            |
+| `make db-reset`      | Recreate the database from migrations + `seed.sql`   |
+| `make db-test`       | Run pgTAP tests in `supabase/tests/`                 |
+| `make db-types`      | Regenerate `src/types/database.ts` from the schema   |
+| `make prod-roster`   | Load the real roster into the deployed database      |
+| `make prod-fixtures` | Load the real matches and squads                     |
+| `make prod-results`  | Import the real match results                        |
+| `make prod-load`     | All three, in order                                  |
+| `make prod-dry-run`  | Rehearse the production load against the local stack |
 
 Re-run `make db-types` after any schema change.
+
+The `prod-` targets are one-off data loads, not part of any routine; see
+[Loading the real league](#loading-the-real-league).
 
 ### Sign-in stops working after `db:reset`
 
@@ -175,10 +186,16 @@ src/
 └── types/          database.ts (generated)
 supabase/
 ├── migrations/     schema, RLS, functions, views, storage policies
+├── production/     the real league's roster, fixtures and results
 ├── tests/          pgTAP
 ├── seed.sql        development data only
 └── config.toml
 ```
+
+`supabase/production/` is applied by hand, once, and is deliberately not
+migrations: migrations run on every `db reset` and would collide with
+`seed.sql`. Reference data a league cannot function without belongs in
+`migrations/`; one league's history belongs there.
 
 ## Scoring model
 
@@ -365,13 +382,15 @@ or `leagues` could see the rows the flow needs.
 
 ## Deployment
 
-Not yet configured. The target is Cloudflare Pages for the frontend
-(`npm run build` → `dist`) and Supabase for the database, auth and storage.
+No project exists yet. The target is Cloudflare Pages for the frontend
+(`npm run build` → `dist`) and Supabase for the database, auth and storage. The
+real league's data is transcribed and ready to load; see
+[Loading the real league](#loading-the-real-league) below.
 
-The production checklist, when you get there:
+The production checklist:
 
 1. Create a Supabase project in a European region and save the database
-   password.
+   password. It is a full-access credential — never a `VITE_` variable.
 2. `npx supabase link --project-ref <ref>` then `npx supabase db push`. Never
    `db reset --linked` — it destroys the remote schema.
 3. Set the Site URL and redirect URLs to the Pages domain.
@@ -382,11 +401,37 @@ The production checklist, when you get there:
    `.env.cloud.local` so `make dev` can reach the project.
 6. Turn on email confirmation in the Supabase auth settings. It is off locally
    and unverified addresses should not be able to claim a player.
-7. Register `dcastellotejera@gmail.com`, confirm it is the administrator, and
-   create the roster.
-8. Share the URL. Sign-up can stay open — an account that has not claimed a
+7. Register `dcastellotejera@gmail.com` and confirm it is the administrator.
+8. Load the roster, fixtures and results: `make prod-load`.
+9. Share the URL. Sign-up can stay open — an account that has not claimed a
    player sees nothing — but disabling it once everyone is in removes the last
    way a stranger could add themselves to the roster.
+
+### Loading the real league
+
+`supabase/production/` holds the league's 22 players, its four played matches
+and all 59 individual scores, transcribed from the spreadsheet. Three scripts,
+run in order, all re-runnable:
+
+```bash
+export PROD_DB_URL='postgresql://postgres.<ref>:<password>@...pooler.supabase.com:6543/postgres'
+make prod-load
+```
+
+`make prod-dry-run` rehearses the same three against the local stack first, and
+needs neither `psql` nor `PROD_DB_URL`.
+
+Two things about it worth knowing here, with the rest — including how to reach
+the tables directly afterwards, and what not to hand-edit — in
+[`supabase/production/README.md`](supabase/production/README.md):
+
+- **The results go through `import_match_scores`**, the same function the CSV
+  upload calls, rather than being inserted directly. `final_score` is stored, so
+  whatever writes it defines the league table; there should only ever be one
+  such thing. It also means step 7 above is a real dependency, because that
+  function refuses anyone who is not a league administrator.
+- **Scores are the spreadsheet's 1–5 doubled**, because the league's metrics are
+  configured 0–10 and the cards divide by that maximum.
 
 ## Contributing
 
