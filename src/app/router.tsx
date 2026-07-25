@@ -4,6 +4,9 @@ import { AdminRoute, ProtectedRoute } from '@/app/guards'
 import { AdminPlayersPage } from '@/pages/AdminPlayersPage'
 import { LeaguePage } from '@/pages/LeaguePage'
 import { LoginPage } from '@/pages/LoginPage'
+import { MatchDetailPage } from '@/pages/MatchDetailPage'
+import { MatchesPage } from '@/pages/MatchesPage'
+import { MatchNewPage } from '@/pages/MatchNewPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { PlayerDetailPage } from '@/pages/PlayerDetailPage'
 import { PlayersPage } from '@/pages/PlayersPage'
@@ -11,7 +14,7 @@ import { PlayersPage } from '@/pages/PlayersPage'
 /**
  * Routes.
  *
- * Matches, rankings and the admin settings pages arrive in later stages;
+ * Rankings and the admin settings pages arrive in the next stage;
  * placeholders would only be misleading, so they are simply absent for now.
  */
 const router = createBrowserRouter([
@@ -26,9 +29,12 @@ const router = createBrowserRouter([
           { path: '/league', element: <LeaguePage /> },
           { path: '/players', element: <PlayersPage /> },
           { path: '/players/:playerId', element: <PlayerDetailPage /> },
+          { path: '/matches', element: <MatchesPage /> },
+          { path: '/matches/:matchId', element: <MatchDetailPage /> },
           {
             element: <AdminRoute />,
             children: [
+              { path: '/matches/new', element: <MatchNewPage /> },
               { path: '/admin/players', element: <AdminPlayersPage /> },
             ],
           },

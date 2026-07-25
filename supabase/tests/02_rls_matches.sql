@@ -35,8 +35,16 @@ set local role authenticated;
 set local request.jwt.claims to
   '{"sub": "99999999-9999-4999-8999-00000000000b", "role": "authenticated"}';
 
+-- Asserted as "the seeded fixtures are visible" rather than an exact total:
+-- an absolute count would break the moment anything else created a match in
+-- this database, which says nothing about whether the policy works.
 select ok(
-  (select count(*) from public.matches) = 3,
+  (select count(*) from public.matches
+   where id in (
+     '33333333-3333-4333-8333-000000000001',
+     '33333333-3333-4333-8333-000000000002',
+     '33333333-3333-4333-8333-000000000003'
+   )) = 3,
   'a member can read the fixture list'
 );
 
@@ -56,12 +64,16 @@ select ok(
 );
 
 select ok(
-  (select count(*) from public.league_metrics) = 4,
+  (select count(*) from public.league_metrics
+   where league_id = '11111111-1111-4111-8111-111111111111'
+     and is_active) = 4,
   'a member can read the league metrics'
 );
 
 select ok(
-  (select count(*) from public.league_attributes) = 5,
+  (select count(*) from public.league_attributes
+   where league_id = '11111111-1111-4111-8111-111111111111'
+     and is_active) = 5,
   'a member can read the league attributes'
 );
 

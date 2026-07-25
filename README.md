@@ -10,19 +10,20 @@ even though the interface shows one.
 
 ## Status
 
-**Stages 0–2 of 4 complete.** You can sign in, browse the roster as football
-cards, open a player's detail and history, and manage players as an
-administrator. Matches and CSV scoring come next.
+**Stages 0–3 of 4 complete.** The full match workflow works end to end: create
+a match, pick the squad, download the score template, fill it in, upload it,
+preview what will change, and import — or correct an already-scored match by
+re-importing. Rankings and the admin settings pages come next.
 
-| Stage | Scope                                                | State      |
-| ----- | ---------------------------------------------------- | ---------- |
-| 0     | Vite + React + shadcn/ui scaffold, linting, CI       | ✅ Done    |
-| 1     | Database schema, RLS, scoring functions, views, seed | ✅ Done    |
-| 2     | Auth, routing, players and player cards              | ✅ Done    |
-| 3     | Matches and CSV results import                       | ⏳ Next    |
-| 4     | Rankings, dashboard, admin settings                  | ⏳ Planned |
+| Stage | Scope                                                | State   |
+| ----- | ---------------------------------------------------- | ------- |
+| 0     | Vite + React + shadcn/ui scaffold, linting, CI       | ✅ Done |
+| 1     | Database schema, RLS, scoring functions, views, seed | ✅ Done |
+| 2     | Auth, routing, players and player cards              | ✅ Done |
+| 3     | Matches and CSV results import                       | ✅ Done |
+| 4     | Rankings, dashboard, admin settings                  | ⏳ Next |
 
-Tests: 61 frontend (Vitest), 90 database (pgTAP).
+Tests: 112 frontend (Vitest), 90 database (pgTAP).
 
 ## Technology
 
@@ -173,6 +174,30 @@ two or more  → (0.5 × average of all previous + 0.5 × latest) × market_cons
 
 The 0–99 card rating and per-metric card stats are presentation only,
 `round(clamp(value × 10, 0, 99))`.
+
+## Scoring a match
+
+1. An administrator creates the match and selects the squad.
+2. **Download CSV** produces a template with one row per convocated player.
+3. Fill in the score columns; leave `Atributos` blank or list awards separated
+   by `|`, e.g. `MVP|Puskas`.
+4. **Subir resultados** parses the file, shows every problem it finds with the
+   offending row number, and previews the base, attribute and final scores.
+5. Importing calls a single PostgreSQL function that re-validates every row and
+   writes them in one transaction. If any row is invalid, nothing is written.
+
+Re-uploading a scored match corrects it: scores are replaced and a player's
+attribute set is rewritten wholesale, rather than accumulating.
+
+The parser is deliberately forgiving where it costs nothing — accents are
+optional in headers and attribute names (`Tactica` matches `Táctica`, `Lesion`
+matches `Lesión`), a decimal comma works as well as a point, and player codes
+are case-insensitive. It is strict about anything that would corrupt a result:
+unknown players, players who were not called up, duplicate rows, out-of-range
+scores, and unknown or repeated attributes are all refused.
+
+Templates are written with a UTF-8 byte order mark so Excel on Windows does not
+mangle accented names.
 
 ## Deployment
 

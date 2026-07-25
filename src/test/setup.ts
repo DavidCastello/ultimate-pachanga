@@ -28,3 +28,17 @@ if (!window.ResizeObserver) {
     disconnect() {}
   }
 }
+
+// jsdom implements no part of the Pointer Capture API, and Radix's Select
+// calls these on the trigger while deciding whether a press became a drag.
+// Without them, opening a Select in a test throws.
+if (!Element.prototype.hasPointerCapture) {
+  Element.prototype.hasPointerCapture = () => false
+  Element.prototype.setPointerCapture = () => {}
+  Element.prototype.releasePointerCapture = () => {}
+}
+
+// Radix scrolls the highlighted option into view when a listbox opens.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {}
+}
