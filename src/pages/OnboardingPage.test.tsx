@@ -35,7 +35,7 @@ vi.mock('@/features/onboarding/api', () => ({
 }))
 vi.mock('@/features/players/api', () => ({ playerKeys: { all: ['players'] } }))
 vi.mock('@/features/auth/api', () => ({ signOut: vi.fn() }))
-vi.mock('@/lib/env', () => ({ APP_NAME: 'Roco Summer League' }))
+vi.mock('@/lib/env', () => ({ APP_NAME: 'Ultimate Pachanga' }))
 vi.mock('@/lib/supabase', () => ({
   getAvatarUrl: () => null,
   supabase: {},

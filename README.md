@@ -89,7 +89,7 @@ make db-status     # copy API URL and the anon/publishable key
 # .env.local
 VITE_SUPABASE_URL=http://127.0.0.1:54421
 VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key from db-status>
-VITE_APP_NAME=Roco Summer League
+VITE_APP_NAME=Ultimate Pachanga
 ```
 
 > The local API runs on **54421**, not Supabase's usual 54321, because another
@@ -541,7 +541,7 @@ without them fails at runtime with an unhelpful blank page:
 ```text
 VITE_SUPABASE_URL              https://sbplcaoenljkbhlhuokg.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY  sb_publishable_...
-VITE_APP_NAME                  Roco Summer League
+VITE_APP_NAME                  Ultimate Pachanga
 ```
 
 Only the publishable key belongs here, as in `.env.cloud.local`. Every `VITE_`
