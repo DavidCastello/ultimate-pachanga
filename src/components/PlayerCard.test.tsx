@@ -22,8 +22,29 @@ describe('PlayerCard', () => {
     expect(screen.getByText('96')).toBeInTheDocument()
     expect(screen.getByText('David Castelló')).toBeInTheDocument()
     expect(screen.getByText('CM')).toBeInTheDocument()
-    expect(screen.getByText('Mediocentro')).toBeInTheDocument()
     expect(screen.getByText('£9,63 M')).toBeInTheDocument()
+  })
+
+  it('prints the registered name under the alias', () => {
+    renderWithProviders(
+      <PlayerCard
+        player={buildPlayerCard({ nickname: 'Cas', displayName: 'Cas' })}
+        metrics={TEST_METRICS}
+      />,
+    )
+
+    expect(screen.getByText('Cas')).toBeInTheDocument()
+    expect(screen.getByText('David Castelló')).toBeInTheDocument()
+  })
+
+  // The view falls back to the name when there is no nickname, so printing both
+  // would say it twice.
+  it('prints the name once when it is also the alias', () => {
+    renderWithProviders(
+      <PlayerCard player={buildPlayerCard()} metrics={TEST_METRICS} />,
+    )
+
+    expect(screen.getAllByText('David Castelló')).toHaveLength(1)
   })
 
   it('shows a stat for every active metric', () => {
@@ -138,13 +159,14 @@ describe('PlayerCard', () => {
     it('keeps what identifies a player', () => {
       renderWithProviders(
         <PlayerCard
-          player={buildPlayerCard()}
+          player={buildPlayerCard({ nickname: 'Cas', displayName: 'Cas' })}
           metrics={TEST_METRICS}
           compact
         />,
       )
 
       expect(screen.getByText('96')).toBeInTheDocument()
+      expect(screen.getByText('Cas')).toBeInTheDocument()
       expect(screen.getByText('David Castelló')).toBeInTheDocument()
       expect(screen.getByText('CM')).toBeInTheDocument()
       expect(screen.getByText('DC')).toBeInTheDocument()
