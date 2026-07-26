@@ -88,15 +88,17 @@ select lives_ok(
   'the two teams number their slots independently'
 );
 
+-- The ceiling rose from 6 to 7 in migration 015, when eight a side arrived:
+-- seven outfielders plus the goalkeeper. Nothing has a slot 8.
 select throws_ok(
   $$update public.match_players
-    set pitch_slot = 7
+    set pitch_slot = 8
     where match_id = '44444444-4444-4444-8444-000000000002'
       and team_side = 'home'
       and pitch_slot = 1$$,
   '23514',
   null,
-  'a slot above 6 is rejected'
+  'a slot above 7 is rejected'
 );
 
 select throws_ok(
