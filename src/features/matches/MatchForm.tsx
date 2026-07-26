@@ -13,6 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DEFAULT_SQUAD_SIZE,
+  SQUAD_SIZES,
+  type SquadSize,
+} from '@/lib/formations'
 import { formatMatchStatus } from '@/lib/formatting'
 import { toImageExtension } from '@/lib/images'
 import { getMatchPhotoUrl } from '@/lib/supabase'
@@ -45,6 +50,9 @@ const matchSchema = z.object({
   homeTeamName: z.string().trim().min(1, 'Falta el equipo local').max(80),
   awayTeamName: z.string().trim().min(1, 'Falta el equipo visitante').max(80),
   status: z.enum(SELECTABLE_STATUSES),
+  // The select hands back a number, so no coercion: the field only ever holds
+  // one of the sizes the pitch can draw.
+  playersPerTeam: z.literal(SQUAD_SIZES),
 })
 
 type MatchFormValues = z.infer<typeof matchSchema>
@@ -125,6 +133,7 @@ export function MatchForm({
           // Only ever reaches the select. A status the select cannot show is
           // preserved separately and never comes from here.
           status: isSelectableStatus(match.status) ? match.status : 'played',
+          playersPerTeam: match.players_per_team as SquadSize,
         }
       : {
           title: '',
@@ -133,6 +142,7 @@ export function MatchForm({
           homeTeamName: 'Los Cracks',
           awayTeamName: 'Los Pachangueros',
           status: 'scheduled',
+          playersPerTeam: DEFAULT_SQUAD_SIZE,
         },
   })
 
@@ -147,6 +157,9 @@ export function MatchForm({
   // Subscribed through useWatch rather than watch(): the preview follows the
   // location as it is typed, and only this field re-renders.
   const location = useWatch({ control, name: 'location' })
+
+  const playersPerTeam = useWatch({ control, name: 'playersPerTeam' })
+  const isShrinking = match ? playersPerTeam < match.players_per_team : false
 
   // What the match would look like if it were saved now: the photograph just
   // chosen, else the one it already has, else the picture bundled for whatever
@@ -189,6 +202,7 @@ export function MatchForm({
         homeTeamName: values.homeTeamName,
         awayTeamName: values.awayTeamName,
         status: preservedStatus ?? values.status,
+        playersPerTeam: values.playersPerTeam,
       },
       photo: photo?.file ?? null,
     })
@@ -298,6 +312,54 @@ export function MatchForm({
           ) : null}
         </Field>
       </div>
+
+      <Field data-invalid={Boolean(errors.playersPerTeam) || undefined}>
+        <FieldLabel htmlFor="match-players-per-team">
+          Jugadores por equipo
+        </FieldLabel>
+        <Controller
+          control={control}
+          name="playersPerTeam"
+          render={({ field }) => (
+            <Select
+              value={String(field.value)}
+              onValueChange={(value) => field.onChange(Number(value))}
+            >
+              <SelectTrigger
+                id="match-players-per-team"
+                className="w-full"
+                onBlur={field.onBlur}
+                data-testid="match-form-players-per-team"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SQUAD_SIZES.map((size) => (
+                  <SelectItem
+                    key={size}
+                    value={String(size)}
+                    data-testid={`match-form-players-per-team-${size}`}
+                  >
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {/* Said only when it is about to happen, and said before saving rather
+            than discovered afterwards on the pitch. */}
+        {isShrinking ? (
+          <p
+            className="text-xs text-muted-foreground"
+            data-testid="match-form-shrink-warning"
+          >
+            Al reducir el equipo, quien se quede sin posición pasa al banquillo.
+            Nadie sale de la convocatoria y la formación vuelve a la de{' '}
+            {playersPerTeam} por equipo.
+          </p>
+        ) : null}
+      </Field>
 
       {/* A preserved status gets a statement rather than a control: offering a
           dropdown that silently discards what you pick is worse than showing

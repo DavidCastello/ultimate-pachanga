@@ -2,31 +2,61 @@ import { describe, expect, it } from 'vitest'
 import {
   CARD_HEIGHT_PERCENT,
   CARD_WIDTH_PERCENT,
-  DEFAULT_FORMATION,
+  DEFAULT_SQUAD_SIZE,
   FORMATIONS,
   GOALKEEPER_SLOT,
-  SQUAD_SIZE,
+  SQUAD_SIZES,
   describeSlot,
+  formationsFor,
   getPitchSlots,
+  squadSizeOf,
   type Formation,
 } from './formations'
 
 describe('formations', () => {
-  it('offers exactly the four supported layouts', () => {
-    expect(FORMATIONS).toEqual(['2-3-1', '3-3', '3-2-1', '1-3-2'])
+  it('offers shapes for five, six, seven and eight a side', () => {
+    expect(SQUAD_SIZES).toEqual([5, 6, 7, 8])
   })
 
-  it('defaults to 2-3-1', () => {
-    expect(DEFAULT_FORMATION).toBe('2-3-1')
+  it('groups every shape under exactly one squad size', () => {
+    const grouped = SQUAD_SIZES.flatMap((size) => formationsFor(size))
+
+    expect(grouped.sort()).toEqual([...FORMATIONS].sort())
   })
 
-  it.each(FORMATIONS)('%s fields a full squad of seven', (formation) => {
-    expect(getPitchSlots(formation)).toHaveLength(SQUAD_SIZE)
+  it.each(SQUAD_SIZES)('offers more than one shape at %i a side', (size) => {
+    expect(formationsFor(size).length).toBeGreaterThan(1)
   })
 
-  it.each(FORMATIONS)('%s numbers slots 0 to 6 without gaps', (formation) => {
+  it('keeps seven a side as the default and its shapes unchanged', () => {
+    expect(DEFAULT_SQUAD_SIZE).toBe(7)
+    expect(formationsFor(7)).toEqual(['2-3-1', '3-3', '3-2-1', '1-3-2'])
+  })
+
+  it('reads a squad size off the name, goalkeeper included', () => {
+    expect(squadSizeOf('2-2')).toBe(5)
+    expect(squadSizeOf('1-3-1')).toBe(6)
+    expect(squadSizeOf('2-3-1')).toBe(7)
+    expect(squadSizeOf('2-4-1')).toBe(8)
+  })
+
+  it.each(FORMATIONS)('%s fields the squad its name implies', (formation) => {
+    expect(getPitchSlots(formation)).toHaveLength(squadSizeOf(formation))
+  })
+
+  it.each(FORMATIONS)('%s numbers slots from 0 without gaps', (formation) => {
     const slots = getPitchSlots(formation).map((entry) => entry.slot)
-    expect(slots).toEqual([0, 1, 2, 3, 4, 5, 6])
+
+    expect(slots).toEqual(
+      Array.from({ length: squadSizeOf(formation) }, (_, index) => index),
+    )
+  })
+
+  // The upper bound the pitch_slot check constraint allows (migration 015).
+  it.each(FORMATIONS)('%s stays within slot 7', (formation) => {
+    for (const slot of getPitchSlots(formation)) {
+      expect(slot.slot).toBeLessThanOrEqual(7)
+    }
   })
 
   it.each(FORMATIONS)(
@@ -83,6 +113,20 @@ describe('formations', () => {
 
     it('reads 1-3-2 as one, three, two', () => {
       expect(lineSizes('1-3-2')).toEqual([1, 3, 2])
+    })
+
+    it('reads 2-2 as two lines of two, for five a side', () => {
+      expect(lineSizes('2-2')).toEqual([2, 2])
+    })
+
+    it('reads 2-4-1 as four across the middle, for eight a side', () => {
+      expect(lineSizes('2-4-1')).toEqual([2, 4, 1])
+    })
+
+    it.each(FORMATIONS)('%s lays out the lines of its name', (formation) => {
+      expect(lineSizes(formation)).toEqual(
+        formation.split('-').map((line) => Number(line)),
+      )
     })
   })
 

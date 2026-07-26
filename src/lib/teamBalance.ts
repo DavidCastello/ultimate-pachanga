@@ -1,4 +1,4 @@
-import { GOALKEEPER_SLOT, SQUAD_SIZE } from '@/lib/formations'
+import { GOALKEEPER_SLOT, type SquadSize } from '@/lib/formations'
 import type { TeamSide } from '@/types/domain'
 
 /**
@@ -63,7 +63,7 @@ export interface BalancedTeams {
 /**
  * Search nodes before the exhaustive pass gives up and keeps its best answer.
  *
- * Reached only by a convocatoria far larger than seven-a-side implies. Every
+ * Reached only by a convocatoria far larger than eight a side implies. Every
  * realistic input is solved exactly, long before this.
  */
 const SEARCH_NODE_BUDGET = 200_000
@@ -140,11 +140,16 @@ function findBestSplit(
  * so a short-handed team is short at the back rather than leaving a hole in the
  * middle of the shape. With nobody who plays in goal, the cheapest player of
  * the side goes in — which is the call a captain makes anyway, and beats
- * fielding six players and an empty net.
+ * fielding everyone outfield in front of an empty net.
+ *
+ * `squadSize` is the match's own `players_per_team`: anyone past it is on the
+ * bench, which is also how a five-a-side match with a dozen names ends up with
+ * seven substitutes.
  */
 function placeSide(
   side: TeamSide,
   members: readonly BalanceCandidate[],
+  squadSize: SquadSize,
 ): TeamAssignment[] {
   const byValueDescending = [...members].sort(
     (left, right) =>
@@ -173,7 +178,7 @@ function placeSide(
     placed.push({
       playerId: member.playerId,
       teamSide: side,
-      pitchSlot: slot < SQUAD_SIZE ? slot : null,
+      pitchSlot: slot < squadSize ? slot : null,
     })
   })
 
@@ -193,6 +198,7 @@ function sumValues(members: readonly BalanceCandidate[]): number {
  */
 export function balanceTeams(
   candidates: readonly BalanceCandidate[],
+  squadSize: SquadSize,
 ): BalancedTeams {
   const roster = [...candidates].sort(
     (left, right) =>
@@ -216,7 +222,10 @@ export function balanceTeams(
   const awayValue = sumValues(away)
 
   return {
-    assignments: [...placeSide('home', home), ...placeSide('away', away)],
+    assignments: [
+      ...placeSide('home', home, squadSize),
+      ...placeSide('away', away, squadSize),
+    ],
     homeValue,
     awayValue,
     difference: Math.abs(homeValue - awayValue),

@@ -1,6 +1,6 @@
 import { supabase, MATCH_PHOTOS_BUCKET } from '@/lib/supabase'
 import { toImageExtension } from '@/lib/images'
-import type { Formation } from '@/lib/formations'
+import type { Formation, SquadSize } from '@/lib/formations'
 import type { Json } from '@/types/database'
 import type {
   MatchRow,
@@ -142,6 +142,16 @@ export interface MatchInput {
   homeTeamName: string
   awayTeamName: string
   status: MatchStatus
+  /**
+   * Players a side, goalkeeper included.
+   *
+   * The formations are not sent with it and never need to be: migration 015
+   * replaces any shape that no longer fits with the default for the new size,
+   * and benches whoever fell off the end of the pitch. So a change of size is
+   * one field, and a formation chosen for a size that still fits survives an
+   * unrelated edit to the title.
+   */
+  playersPerTeam: SquadSize
 }
 
 export async function createMatch(
@@ -158,6 +168,7 @@ export async function createMatch(
       home_team_name: input.homeTeamName,
       away_team_name: input.awayTeamName,
       status: input.status,
+      players_per_team: input.playersPerTeam,
     })
     .select('id')
     .single()
@@ -179,6 +190,7 @@ export async function updateMatch(
       home_team_name: input.homeTeamName,
       away_team_name: input.awayTeamName,
       status: input.status,
+      players_per_team: input.playersPerTeam,
     })
     .eq('id', matchId)
 

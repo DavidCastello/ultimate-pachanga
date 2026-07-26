@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { balanceTeams, type BalanceCandidate } from '@/lib/teamBalance'
-import { SQUAD_SIZE } from '@/lib/formations'
+import { DEFAULT_SQUAD_SIZE, type SquadSize } from '@/lib/formations'
+
+/**
+ * The split itself does not depend on how many fit on the pitch, so these tests
+ * state a size only when that is what they are about.
+ */
+function balance(
+  candidates: readonly BalanceCandidate[],
+  squadSize: SquadSize = DEFAULT_SQUAD_SIZE,
+) {
+  return balanceTeams(candidates, squadSize)
+}
 
 function candidate(
   playerId: string,
@@ -17,10 +28,7 @@ function roster(count: number): BalanceCandidate[] {
   )
 }
 
-function sideOf(
-  result: ReturnType<typeof balanceTeams>,
-  playerId: string,
-): string {
+function sideOf(result: ReturnType<typeof balance>, playerId: string): string {
   const assignment = result.assignments.find(
     (entry) => entry.playerId === playerId,
   )
@@ -62,7 +70,7 @@ function minimumGapByBruteForce(values: readonly number[]): number {
 
 describe('balanceTeams', () => {
   it('splits an even convocatoria into two equal squads', () => {
-    const result = balanceTeams(roster(14))
+    const result = balance(roster(14))
 
     const home = result.assignments.filter((entry) => entry.teamSide === 'home')
     const away = result.assignments.filter((entry) => entry.teamSide === 'away')
@@ -72,7 +80,7 @@ describe('balanceTeams', () => {
   })
 
   it('gives the odd player to the home side', () => {
-    const result = balanceTeams(roster(13))
+    const result = balance(roster(13))
 
     expect(
       result.assignments.filter((entry) => entry.teamSide === 'home'),
@@ -85,7 +93,7 @@ describe('balanceTeams', () => {
   it('finds a perfect split when one exists', () => {
     // 10 + 7 = 9 + 8, which greedy also finds; the point is that the reported
     // difference is zero and both totals are stated.
-    const result = balanceTeams([
+    const result = balance([
       candidate('a', 10_000_000),
       candidate('b', 9_000_000),
       candidate('c', 8_000_000),
@@ -104,7 +112,7 @@ describe('balanceTeams', () => {
     // 20+8+4 against 12+9+6, a gap of 5. The optimum is 20+6+4 against
     // 12+9+8: a gap of 1.
     const values = [20, 12, 9, 8, 6, 4].map((value) => value * 100_000)
-    const result = balanceTeams(
+    const result = balance(
       values.map((value, index) => candidate(`p${index}`, value)),
     )
 
@@ -124,7 +132,7 @@ describe('balanceTeams', () => {
 
     for (const values of cases) {
       const scaled = values.map((value) => value * 10_000)
-      const result = balanceTeams(
+      const result = balance(
         scaled.map((value, index) => candidate(`p${index}`, value)),
       )
 
@@ -137,8 +145,8 @@ describe('balanceTeams', () => {
       candidate(`p${index}`, 5_000_000),
     )
 
-    const first = balanceTeams(identical)
-    const second = balanceTeams([...identical].reverse())
+    const first = balance(identical)
+    const second = balance([...identical].reverse())
 
     expect(first.assignments).toEqual(second.assignments)
     expect(first.difference).toBe(0)
@@ -147,7 +155,7 @@ describe('balanceTeams', () => {
   it('puts a goalkeeper in goal on each side', () => {
     // The only split with a zero gap — 10 + 7 against 9 + 8 — is the one that
     // separates the two keepers, so this asserts placement rather than luck.
-    const result = balanceTeams([
+    const result = balance([
       candidate('gk-a', 10_000_000, true),
       candidate('out-a', 9_000_000),
       candidate('gk-b', 8_000_000, true),
@@ -164,7 +172,7 @@ describe('balanceTeams', () => {
   })
 
   it('sends the cheapest player of a side without a keeper into goal', () => {
-    const result = balanceTeams([
+    const result = balance([
       candidate('rich', 9_000_000),
       candidate('poor', 1_000_000),
     ])
@@ -178,7 +186,7 @@ describe('balanceTeams', () => {
   })
 
   it('benches whoever does not fit on the pitch', () => {
-    const result = balanceTeams(roster(18))
+    const result = balance(roster(18))
 
     const benched = result.assignments.filter(
       (entry) => entry.pitchSlot === null,
@@ -191,11 +199,40 @@ describe('balanceTeams', () => {
         (entry) => entry.teamSide === side && entry.pitchSlot !== null,
       )
 
-      expect(placed).toHaveLength(SQUAD_SIZE)
+      expect(placed).toHaveLength(DEFAULT_SQUAD_SIZE)
       expect(new Set(placed.map((entry) => entry.pitchSlot)).size).toBe(
-        SQUAD_SIZE,
+        DEFAULT_SQUAD_SIZE,
       )
     }
+  })
+
+  it.each([5, 6, 7, 8] as const)(
+    'fills a pitch of %i a side and benches the rest',
+    (squadSize) => {
+      const result = balance(roster(18), squadSize)
+
+      for (const side of ['home', 'away'] as const) {
+        const ofSide = result.assignments.filter(
+          (entry) => entry.teamSide === side,
+        )
+        const placed = ofSide.filter((entry) => entry.pitchSlot !== null)
+
+        expect(placed).toHaveLength(squadSize)
+        // Slots 0 to squadSize - 1, each used once.
+        expect(placed.map((entry) => entry.pitchSlot).sort()).toEqual(
+          Array.from({ length: squadSize }, (_, index) => index),
+        )
+        expect(ofSide).toHaveLength(9)
+      }
+    },
+  )
+
+  it('places everyone when the squad is smaller than the pitch', () => {
+    const result = balance(roster(8), 8)
+
+    expect(
+      result.assignments.filter((entry) => entry.pitchSlot === null),
+    ).toHaveLength(0)
   })
 
   it('benches the cheapest players rather than the best', () => {
@@ -203,7 +240,7 @@ describe('balanceTeams', () => {
     const valueOf = new Map(
       squad.map((member) => [member.playerId, member.marketValueGbp]),
     )
-    const result = balanceTeams(squad)
+    const result = balance(squad)
 
     for (const side of ['home', 'away'] as const) {
       const ofSide = result.assignments.filter(
@@ -223,7 +260,7 @@ describe('balanceTeams', () => {
   })
 
   it('handles a convocatoria of one', () => {
-    const result = balanceTeams([candidate('alone', 3_000_000)])
+    const result = balance([candidate('alone', 3_000_000)])
 
     expect(result.assignments).toEqual([
       { playerId: 'alone', teamSide: 'home', pitchSlot: 0 },
@@ -232,7 +269,7 @@ describe('balanceTeams', () => {
   })
 
   it('handles an empty convocatoria', () => {
-    expect(balanceTeams([])).toEqual({
+    expect(balance([])).toEqual({
       assignments: [],
       homeValue: 0,
       awayValue: 0,
