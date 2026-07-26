@@ -31,6 +31,12 @@ const SELECTABLE_STATUSES = [
   'cancelled',
 ] as const satisfies readonly MatchStatus[]
 
+function isSelectableStatus(
+  status: MatchStatus,
+): status is (typeof SELECTABLE_STATUSES)[number] {
+  return (SELECTABLE_STATUSES as readonly MatchStatus[]).includes(status)
+}
+
 const matchSchema = z.object({
   title: z.string().trim().min(1, 'El título es obligatorio').max(120),
   location: z.string().trim().min(1, 'El lugar es obligatorio').max(160),
@@ -94,6 +100,14 @@ export function MatchForm({
   const [photoError, setPhotoError] = useState<string | null>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
 
+  // A status the select cannot offer is carried through the form untouched.
+  // Without this, editing a scored match — to correct its title, or only to
+  // attach a photograph — would save whatever the select happened to show and
+  // drop the match out of every derived statistic, which all filter on
+  // `status = 'scored'`.
+  const preservedStatus =
+    match && !isSelectableStatus(match.status) ? match.status : null
+
   const {
     register,
     control,
@@ -108,12 +122,9 @@ export function MatchForm({
           playedAt: toLocalInputValue(match.played_at),
           homeTeamName: match.home_team_name,
           awayTeamName: match.away_team_name,
-          // A scored match keeps its status; the select simply cannot show it.
-          status: (SELECTABLE_STATUSES as readonly string[]).includes(
-            match.status,
-          )
-            ? (match.status as MatchFormValues['status'])
-            : 'played',
+          // Only ever reaches the select. A status the select cannot show is
+          // preserved separately and never comes from here.
+          status: isSelectableStatus(match.status) ? match.status : 'played',
         }
       : {
           title: '',
@@ -177,7 +188,7 @@ export function MatchForm({
         playedAt: new Date(values.playedAt).toISOString(),
         homeTeamName: values.homeTeamName,
         awayTeamName: values.awayTeamName,
-        status: values.status,
+        status: preservedStatus ?? values.status,
       },
       photo: photo?.file ?? null,
     })
@@ -288,31 +299,44 @@ export function MatchForm({
         </Field>
       </div>
 
-      <Field>
-        <FieldLabel htmlFor="match-status">Estado</FieldLabel>
-        <Controller
-          control={control}
-          name="status"
-          render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger
-                id="match-status"
-                className="w-full"
-                onBlur={field.onBlur}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SELECTABLE_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {formatMatchStatus(status)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        />
-      </Field>
+      {/* A preserved status gets a statement rather than a control: offering a
+          dropdown that silently discards what you pick is worse than showing
+          none. Re-importing the results is what changes a scored match. */}
+      {preservedStatus ? (
+        <Field>
+          <FieldLabel htmlFor="match-status">Estado</FieldLabel>
+          <p id="match-status" className="text-sm text-muted-foreground">
+            {formatMatchStatus(preservedStatus)} — lo fija la importación de
+            resultados, no este formulario.
+          </p>
+        </Field>
+      ) : (
+        <Field>
+          <FieldLabel htmlFor="match-status">Estado</FieldLabel>
+          <Controller
+            control={control}
+            name="status"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger
+                  id="match-status"
+                  className="w-full"
+                  onBlur={field.onBlur}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SELECTABLE_STATUSES.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {formatMatchStatus(status)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </Field>
+      )}
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>

@@ -162,10 +162,28 @@ describe('MatchForm', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('shows a scored match as played so its status is not silently reset', () => {
+  // The regression that emptied every statistic in the deployed league: the
+  // select cannot offer `scored`, so the form fell back to `played` and saved
+  // that — and every derived view filters on `status = 'scored'`. Editing a
+  // scored match to attach a photograph silently uncounted it.
+  it('gives a scored match back its own status, not the fallback', async () => {
+    const user = userEvent.setup()
+    const { onSubmit } = renderForm({ ...EXISTING_MATCH, status: 'scored' })
+
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    expect(onSubmit.mock.calls[0][0].match.status).toBe('scored')
+  })
+
+  // A dropdown whose choice is thrown away is worse than no dropdown.
+  it('states a scored status instead of offering a control for it', () => {
     renderForm({ ...EXISTING_MATCH, status: 'scored' })
 
-    expect(screen.getByLabelText('Estado')).toHaveTextContent('Jugado')
+    expect(screen.getByText(/Puntuado/)).toBeVisible()
+    expect(
+      screen.queryByRole('combobox', { name: 'Estado' }),
+    ).not.toBeInTheDocument()
   })
 
   it('calls onCancel without submitting', async () => {
