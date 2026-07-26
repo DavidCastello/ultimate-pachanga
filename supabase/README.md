@@ -50,7 +50,7 @@ make db-start     # start the local stack (Docker must be running)
 make db-stop      # stop it
 make db-status    # local URLs and keys
 make db-reset     # wipe local, replay migrations + seeds — your undo button
-make db-test      # the 170 pgTAP tests
+make db-test      # the 187 pgTAP tests
 make db-types     # regenerate src/types/database.ts after a schema change
 ```
 
@@ -214,6 +214,7 @@ whether the match has been played (`public.match_is_upcoming`: status `draft` or
 | Remove somebody               | ❌     | ✅    |
 | Move players, sides and bench | ✅     | ✅    |
 | Change the formation          | ❌     | ✅    |
+| Change how many play a side   | ❌     | ✅    |
 
 Once it has been played nobody adds or removes anyone — an administrator
 included, because the squad is the record of who turned up and the scores hang
@@ -245,16 +246,17 @@ the stack captures everything at **http://127.0.0.1:54324** (Mailpit), where you
 open the message and click the link yourself. The seeded owner arrives already
 confirmed, so `make db-reset` still lets you straight in.
 
-### In production — TODO, once Cloudflare Pages exists
+### In production — TODO
 
-Nothing to do yet, and deliberately so: **there is no deployed frontend for a
-confirmation link to point at.** Both steps below need the Pages domain, so they
-wait for it. Until then the only production account is the owner's, created in
-the dashboard with Auto Confirm, which never sent an email at all.
+The frontend is up, at
+<https://ultimate-pachanga.dcastellotejera.workers.dev/>, so the blocker is
+gone: there is now a domain for a confirmation link to point at. Until these are
+done the only production account is the owner's, created in the dashboard with
+Auto Confirm, which never sent an email at all.
 
-When the frontend goes up, in this order:
+In this order:
 
-- [ ] **Authentication → URL Configuration** → set **Site URL** to the Pages
+- [ ] **Authentication → URL Configuration** → set **Site URL** to the Workers
       domain and add it under **Redirect URLs**.
 - [ ] **Authentication → Sign In / Providers → Email** → turn on
       **Confirm email**.

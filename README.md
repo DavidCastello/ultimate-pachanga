@@ -1,8 +1,8 @@
 # Ultimate Pachanga — Roco Summer League
 
-Web app for running an amateur Fútbol 7 league: players, matches, squad
-selection, CSV-based post-match scoring, statistics and calculated market values,
-presented as football cards.
+Web app for running an amateur football league — five to eight a side, whoever
+turns up: players, matches, squad selection, CSV-based post-match scoring,
+statistics and calculated market values, presented as football cards.
 
 Built for a single league (_Liga de verano roco_) and roughly 20 players, on
 free-tier infrastructure. The database schema is multi-league from the start
@@ -26,17 +26,19 @@ the statistics — with league settings and member management for administrators
 | 7     | Statistics: podiums, palmarés, evolution and radar   | ✅ Done |
 | 8     | Scores editable per player from the match page       | ✅ Done |
 | 9     | Self-service convocatorias and team balancing        | ✅ Done |
+| 10    | Matches from five to eight a side                    | ✅ Done |
 
-Tests: 314 frontend (Vitest), 170 database (pgTAP). Stages 0–4 were verified in
+Tests: 481 frontend (Vitest), 187 database (pgTAP). Stages 0–4 were verified in
 Chrome at both desktop and 375 px: every page renders, nothing scrolls
 horizontally, and a real pointer drag rearranges a line-up and persists it.
 Stages 5, 6 and 9 — joining, the profile page, the reworked scoring, and signing
 yourself up for a match — are covered by tests but have not had that manual pass
 yet.
 
-The database is deployed. The schema, the 22 players, the four played matches
-and all 59 scores are live on Supabase; the frontend on Cloudflare Workers is
-the remaining step.
+**Both halves are deployed.** The schema, the 22 players, the four played
+matches and all 59 scores are live on Supabase, and the frontend is on
+Cloudflare Workers at
+<https://ultimate-pachanga.dcastellotejera.workers.dev/>.
 
 ## Technology
 
@@ -348,17 +350,30 @@ it is the plan, afterwards the record of who played where. Each side gets its
 own pitch, drawn with their goal at the bottom so the attack points upwards, and
 players appear as the same football cards used everywhere else.
 
-Fútbol 7 means seven a side: the goalkeeper is always at the foot of the pitch,
-and the formation describes the six outfielders.
+### Squad size
 
-| Formation | Shape                                                         |
-| --------- | ------------------------------------------------------------- |
-| `2-3-1`   | Default: two at the back, three across midfield, one up front |
-| `3-3`     | Two lines of three                                            |
-| `3-2-1`   | Three, two, one                                               |
-| `1-3-2`   | A sweeper, three across, two up front                         |
+A match is **five to eight a side**, chosen when it is created and editable
+afterwards; seven is the default. The goalkeeper is always at the foot of the
+pitch, and the formation names the outfielders — so the name gives the size away:
+`2-2` is four outfielders and a keeper, `3-3-1` is eight a side.
 
-Each team's formation is chosen independently.
+| A side | Formations                                 |
+| ------ | ------------------------------------------ |
+| 5      | `2-2`, `1-2-1`, `3-1`                      |
+| 6      | `2-1-2`, `3-2`, `2-2-1`, `1-3-1`           |
+| 7      | `2-3-1` (default), `3-3`, `3-2-1`, `1-3-2` |
+| 8      | `3-3-1`, `2-3-2`, `3-2-2`, `2-4-1`         |
+
+Each team's formation is chosen independently, from the shapes that fit the
+match's size.
+
+**Changing the size of an existing match** never removes anyone from the
+convocatoria. Growing it adds empty positions to fill by dragging or by
+re-balancing. Shrinking it sends whoever no longer has a position to the bench —
+the attack goes first, since slots run from the back forwards — and replaces any
+formation that no longer exists with the default for the new size. The database
+does both itself (migration 015), so a line-up can never hold a player in a
+position the pitch does not draw.
 
 A line-up is rearranged by **dragging one player onto another**, which swaps
 them. Tapping one and then the other does the same thing and is easier on a
@@ -479,8 +494,9 @@ or `leagues` could see the rows the flow needs.
 
 ## Deployment
 
-Supabase hosts the database, auth and storage; Cloudflare Pages will host the
-frontend (`npm run build` → `dist`). The database half is done.
+Supabase hosts the database, auth and storage; Cloudflare Workers hosts the
+frontend (`npm run build` → `dist`), live at
+<https://ultimate-pachanga.dcastellotejera.workers.dev/>. Both halves are up.
 
 1. ✅ Supabase project in `eu-north-1`, database password saved. It is a
    full-access credential — never a `VITE_` variable.
@@ -488,22 +504,31 @@ frontend (`npm run build` → `dist`). The database half is done.
    schema.
 3. ✅ Owner account registered; `app.owner_email()` made it the administrator.
 4. ✅ Roster, fixtures and results loaded with `make prod-load`.
-5. ⬜ Push any migration production does not have yet, **before** the frontend
-   that needs it: `npx supabase db push --db-url "$PROD_DB_URL"`, and check with
-   `npx supabase migration list`. A deploy whose schema arrives second is a
-   deploy that is briefly broken for everyone.
-6. ⬜ Point Cloudflare Pages at this repository — see below.
-7. ⬜ Set the Site URL and redirect URLs to the Pages domain. Confirmation links
+5. ✅ Cloudflare Workers pointed at this repository — see below.
+6. ⬜ Set the Site URL and redirect URLs to the Workers domain. Confirmation links
    are built from the Site URL, so this has to happen before anyone registers.
-8. ⬜ Turn on **Confirm email** in the Supabase auth settings, and replace the
+7. ⬜ Turn on **Confirm email** in the Supabase auth settings, and replace the
    built-in email sender with real SMTP — it allows only a couple of messages an
    hour, which will not carry twenty people signing up the same evening.
-9. ⬜ Share the URL. Sign-up can stay open — an account that has not claimed a
+8. ⬜ Share the URL. Sign-up can stay open — an account that has not claimed a
    player sees nothing — but disabling it once everyone is in removes the last
    way a stranger could add themselves to the roster.
 
-Steps 7 and 8, and everything else about running the database, are covered in
+Steps 6 and 7, and everything else about running the database, are covered in
 [`supabase/README.md`](supabase/README.md).
+
+**Every deploy after the first follows one rule: the schema goes first.** Merging
+to `main` deploys the frontend within minutes, so any migration production does
+not have yet is pushed before the merge, not after:
+
+```bash
+npx supabase migration list --db-url "$PROD_DB_URL"   # what production has
+npx supabase db push --db-url "$PROD_DB_URL"          # give it the rest
+```
+
+A deploy whose schema arrives second is a deploy that is briefly broken for
+everyone. The reverse — a migration live before the frontend that uses it — is
+safe, because every migration here is additive.
 
 ### Cloudflare Workers
 
