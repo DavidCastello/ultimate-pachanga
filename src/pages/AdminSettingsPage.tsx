@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ErrorState } from '@/components/ErrorState'
 import {
   updateLeagueSettings,
   type LeagueSettingsInput,
@@ -50,7 +51,7 @@ const settingsSchema = z.object({
 type SettingsValues = z.infer<typeof settingsSchema>
 
 export function AdminSettingsPage() {
-  const { data: league, isPending } = useLeague()
+  const { data: league, isPending, error, refetch } = useLeague()
   const queryClient = useQueryClient()
 
   const save = useMutation({
@@ -70,6 +71,10 @@ export function AdminSettingsPage() {
       )
     },
   })
+
+  if (error) {
+    return <ErrorState error={error} onRetry={() => void refetch()} />
+  }
 
   if (isPending || !league) {
     return (

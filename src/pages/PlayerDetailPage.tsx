@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table'
 import { AttributeBadge } from '@/components/AttributeBadge'
 import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
 import { MarketValue } from '@/components/MarketValue'
 import { MetricRadarChart } from '@/components/MetricRadarChart'
 import { PlayerCard } from '@/components/PlayerCard'
@@ -58,13 +59,19 @@ export function PlayerDetailPage() {
     data: player,
     isPending,
     error,
+    refetch,
   } = useQuery({
     queryKey: playerKeys.card(playerId),
     enabled: Boolean(playerId),
     queryFn: () => fetchPlayerCard(playerId),
   })
 
-  const { data: history = [], isPending: isHistoryPending } = useQuery({
+  const {
+    data: history = [],
+    isPending: isHistoryPending,
+    error: historyError,
+    refetch: refetchHistory,
+  } = useQuery({
     queryKey: playerKeys.history(playerId),
     enabled: Boolean(playerId),
     queryFn: () => fetchPlayerHistory(playerId),
@@ -82,7 +89,13 @@ export function PlayerDetailPage() {
     )
   }
 
-  if (error || !player) {
+  // A failed read and a missing player are different answers: one is worth
+  // retrying and one is worth going back from.
+  if (error) {
+    return <ErrorState error={error} onRetry={() => void refetch()} />
+  }
+
+  if (!player) {
     return (
       <EmptyState
         title="No se encontró el jugador"
@@ -211,6 +224,12 @@ export function PlayerDetailPage() {
         <CardContent>
           {isHistoryPending ? (
             <Skeleton className="h-24" />
+          ) : historyError ? (
+            <ErrorState
+              error={historyError}
+              onRetry={() => void refetchHistory()}
+              className="border-0 py-6"
+            />
           ) : history.length === 0 ? (
             <EmptyState
               icon={History}

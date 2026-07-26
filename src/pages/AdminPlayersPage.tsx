@@ -25,6 +25,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
 import { PlayerFormDialog } from '@/features/players/PlayerFormDialog'
 import {
   createPlayer,
@@ -56,7 +57,12 @@ export function AdminPlayersPage() {
 
   const leagueId = membership?.leagueId
 
-  const { data: players, isPending } = useQuery({
+  const {
+    data: players,
+    isPending,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: playerKeys.cards(leagueId ?? ''),
     enabled: Boolean(leagueId),
     queryFn: () => fetchPlayerCards(leagueId!),
@@ -145,6 +151,8 @@ export function AdminPlayersPage() {
 
       {isPending ? (
         <Skeleton className="h-64 rounded-xl" />
+      ) : error ? (
+        <ErrorState error={error} onRetry={() => void refetch()} />
       ) : !players || players.length === 0 ? (
         <EmptyState
           icon={UserRound}

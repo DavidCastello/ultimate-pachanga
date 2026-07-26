@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AdminOnly } from '@/components/AdminOnly'
 import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
 import { MatchCard } from '@/components/MatchCard'
 import { fetchMatches, matchKeys } from '@/features/matches/api'
 import { useMembership } from '@/features/league/useLeague'
@@ -39,7 +40,12 @@ function MatchSection({
 export function MatchesPage() {
   const { data: membership } = useMembership()
 
-  const { data: matches, isPending } = useQuery({
+  const {
+    data: matches,
+    isPending,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: matchKeys.list(membership?.leagueId ?? ''),
     enabled: Boolean(membership),
     queryFn: () => fetchMatches(membership!.leagueId),
@@ -83,6 +89,8 @@ export function MatchesPage() {
             <Skeleton key={index} className="h-32 rounded-xl" />
           ))}
         </div>
+      ) : error ? (
+        <ErrorState error={error} onRetry={() => void refetch()} />
       ) : (matches ?? []).length === 0 ? (
         <EmptyState
           icon={CalendarDays}

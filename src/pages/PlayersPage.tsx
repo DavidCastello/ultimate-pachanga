@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
 import {
   PlayerCardGrid,
   PlayerCardGridSkeleton,
@@ -60,7 +61,12 @@ export function PlayersPage() {
   const [sortBy, setSortBy] = useState<SortKey>('rating')
   const [showInactive, setShowInactive] = useState(false)
 
-  const { data: players, isPending } = useQuery({
+  const {
+    data: players,
+    isPending,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: playerKeys.cards(membership?.leagueId ?? ''),
     enabled: Boolean(membership),
     queryFn: () => fetchPlayerCards(membership!.leagueId),
@@ -178,6 +184,8 @@ export function PlayersPage() {
 
       {isPending ? (
         <PlayerCardGridSkeleton />
+      ) : error ? (
+        <ErrorState error={error} onRetry={() => void refetch()} />
       ) : visiblePlayers.length === 0 ? (
         <EmptyState
           icon={UserRound}

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
 import { MarketValue } from '@/components/MarketValue'
 import { PodiumList } from '@/components/PodiumList'
 import { RankingTable } from '@/components/RankingTable'
@@ -146,7 +147,12 @@ export function StatsPage() {
   const { data: attributes = [] } = useLeagueAttributes()
   const [tab, setTab] = useState('general')
 
-  const { data: players, isPending } = useQuery({
+  const {
+    data: players,
+    isPending,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: playerKeys.cards(membership?.leagueId ?? ''),
     enabled: Boolean(membership),
     queryFn: () => fetchPlayerCards(membership!.leagueId),
@@ -174,6 +180,15 @@ export function StatsPage() {
       <div className="flex flex-col gap-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-96 rounded-xl" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-5">
+        <h1 className="text-2xl font-bold">Estadísticas</h1>
+        <ErrorState error={error} onRetry={() => void refetch()} />
       </div>
     )
   }

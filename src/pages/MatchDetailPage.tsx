@@ -31,6 +31,7 @@ import {
 import { AdminOnly } from '@/components/AdminOnly'
 import { AttributeBadge } from '@/components/AttributeBadge'
 import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
 import { MatchHero } from '@/components/MatchHero'
 import { MatchForm, type MatchSubmission } from '@/features/matches/MatchForm'
 import {
@@ -138,7 +139,12 @@ export function MatchDetailPage() {
   const [isUploadOpen, setIsUploadOpen] = useState(false)
   const [scoreTarget, setScoreTarget] = useState<ScoreTarget | null>(null)
 
-  const { data: match, isPending: isMatchPending } = useQuery({
+  const {
+    data: match,
+    isPending: isMatchPending,
+    error: matchError,
+    refetch: refetchMatch,
+  } = useQuery({
     queryKey: matchKeys.detail(matchId),
     enabled: Boolean(matchId),
     queryFn: () => fetchMatch(matchId),
@@ -487,6 +493,10 @@ export function MatchDetailPage() {
         <Skeleton className="h-64 rounded-xl" />
       </div>
     )
+  }
+
+  if (matchError) {
+    return <ErrorState error={matchError} onRetry={() => void refetchMatch()} />
   }
 
   if (!match) {

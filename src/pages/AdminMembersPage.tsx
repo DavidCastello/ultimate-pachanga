@@ -31,6 +31,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
 import {
   fetchLeagueMembers,
   removeMember,
@@ -52,7 +53,12 @@ export function AdminMembersPage() {
 
   const leagueId = membership?.leagueId
 
-  const { data: members, isPending } = useQuery({
+  const {
+    data: members,
+    isPending,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: [...leagueKeys.members, leagueId],
     enabled: Boolean(leagueId),
     queryFn: () => fetchLeagueMembers(leagueId!),
@@ -117,6 +123,12 @@ export function AdminMembersPage() {
         <CardContent>
           {isPending ? (
             <Skeleton className="h-40" />
+          ) : error ? (
+            <ErrorState
+              error={error}
+              onRetry={() => void refetch()}
+              className="border-0 py-6"
+            />
           ) : !members || members.length === 0 ? (
             <EmptyState
               icon={UserRound}

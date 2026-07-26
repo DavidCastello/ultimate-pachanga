@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ErrorState } from '@/components/ErrorState'
 import { PlayerCard } from '@/components/PlayerCard'
 import { PlayerFormDialog } from '@/features/players/PlayerFormDialog'
 import {
@@ -46,7 +47,12 @@ export function ProfilePage() {
   const { data: metrics = [] } = useLeagueMetrics()
   const { data: myPlayerId } = useMyPlayerId()
 
-  const { data: player, isPending } = useQuery({
+  const {
+    data: player,
+    isPending,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: playerKeys.card(myPlayerId ?? ''),
     enabled: Boolean(myPlayerId),
     queryFn: () => fetchPlayerCard(myPlayerId!),
@@ -86,6 +92,13 @@ export function ProfilePage() {
     event.target.value = ''
 
     if (file) uploadAvatar.mutate(file)
+  }
+
+  // `error` is checked before the `!player` skeleton: a failed read leaves the
+  // data undefined too, and a skeleton that never resolves is the least
+  // diagnosable thing this page could show.
+  if (error) {
+    return <ErrorState error={error} onRetry={() => void refetch()} />
   }
 
   if (isPending || !player) {

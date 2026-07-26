@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AttributeBadge } from '@/components/AttributeBadge'
 import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
 import { MarketValue } from '@/components/MarketValue'
 import { MatchCard } from '@/components/MatchCard'
 import { fetchPlayerCards, playerKeys } from '@/features/players/api'
@@ -81,7 +82,12 @@ export function LeaguePage() {
   const { data: league } = useLeague()
   const { data: attributes = [] } = useLeagueAttributes()
 
-  const { data: players, isPending: arePlayersPending } = useQuery({
+  const {
+    data: players,
+    isPending: arePlayersPending,
+    error: playersError,
+    refetch: refetchPlayers,
+  } = useQuery({
     queryKey: playerKeys.cards(membership?.leagueId ?? ''),
     enabled: Boolean(membership),
     queryFn: () => fetchPlayerCards(membership!.leagueId),
@@ -215,6 +221,11 @@ export function LeaguePage() {
           <Skeleton className="h-56 rounded-xl" />
           <Skeleton className="h-56 rounded-xl" />
         </div>
+      ) : playersError ? (
+        <ErrorState
+          error={playersError}
+          onRetry={() => void refetchPlayers()}
+        />
       ) : activePlayers.length === 0 ? (
         <EmptyState
           icon={Users}
