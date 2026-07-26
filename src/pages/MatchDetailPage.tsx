@@ -62,7 +62,7 @@ import {
   type LineupChange,
   type MatchScoreEntry,
 } from '@/features/matches/api'
-import { DEFAULT_FORMATION, type Formation } from '@/lib/formations'
+import type { Formation, SquadSize } from '@/lib/formations'
 import { fetchPlayerCards, playerKeys } from '@/features/players/api'
 import { useMyPlayerId } from '@/features/players/useMyPlayer'
 import {
@@ -362,6 +362,7 @@ export function MatchDetailPage() {
           marketValueGbp: entry.player.marketValueGbp,
           isGoalkeeper: entry.player.preferredPosition === 'GK',
         })),
+        match!.players_per_team as SquadSize,
       )
 
       const current = new Map(
@@ -686,8 +687,8 @@ export function MatchDetailPage() {
               metrics={metrics}
               homeTeamName={match.home_team_name}
               awayTeamName={match.away_team_name}
-              homeFormation={match.home_formation ?? DEFAULT_FORMATION}
-              awayFormation={match.away_formation ?? DEFAULT_FORMATION}
+              homeFormation={match.home_formation}
+              awayFormation={match.away_formation}
               interactive={canArrangeLineup}
               canChangeFormation={isAdmin}
               onFormationChange={(side, formation) =>

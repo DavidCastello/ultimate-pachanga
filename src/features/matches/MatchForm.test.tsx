@@ -186,6 +186,100 @@ describe('MatchForm', () => {
     ).not.toBeInTheDocument()
   })
 
+  describe('players per team', () => {
+    it('defaults a new match to seven a side', async () => {
+      const user = userEvent.setup()
+      const { onSubmit } = renderForm()
+
+      await user.type(screen.getByLabelText('Título'), 'Jornada 4')
+      await user.type(screen.getByLabelText('Lugar'), 'Roco')
+      await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+      await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+      expect(onSubmit.mock.calls[0][0].match.playersPerTeam).toBe(7)
+    })
+
+    it('offers five to eight and nothing else', async () => {
+      const user = userEvent.setup()
+      renderForm()
+
+      await user.click(screen.getByLabelText('Jugadores por equipo'))
+
+      expect(await screen.findByRole('option', { name: '5' })).toBeVisible()
+      for (const size of ['6', '7', '8']) {
+        expect(screen.getByRole('option', { name: size })).toBeVisible()
+      }
+      expect(
+        screen.queryByRole('option', { name: '4' }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('option', { name: '9' }),
+      ).not.toBeInTheDocument()
+    })
+
+    it('submits the chosen size as a number', async () => {
+      const user = userEvent.setup()
+      const { onSubmit } = renderForm(EXISTING_MATCH)
+
+      await user.click(screen.getByLabelText('Jugadores por equipo'))
+      await user.click(await screen.findByRole('option', { name: '5' }))
+      await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+      await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+      // A number, not the string the select hands back: the column is smallint.
+      expect(onSubmit.mock.calls[0][0].match.playersPerTeam).toBe(5)
+    })
+
+    it('pre-fills the size an existing match was created with', () => {
+      renderForm(buildMatch({ players_per_team: 8, home_formation: '3-3-1' }))
+
+      expect(screen.getByLabelText('Jugadores por equipo')).toHaveTextContent(
+        '8',
+      )
+    })
+
+    // Losing a place on the pitch is not the same as losing your place in the
+    // squad, and it is worth saying so before the change is saved.
+    it('warns that shrinking a match benches players', async () => {
+      const user = userEvent.setup()
+      renderForm(EXISTING_MATCH)
+
+      expect(
+        screen.queryByTestId('match-form-shrink-warning'),
+      ).not.toBeInTheDocument()
+
+      await user.click(screen.getByLabelText('Jugadores por equipo'))
+      await user.click(await screen.findByRole('option', { name: '5' }))
+
+      expect(screen.getByTestId('match-form-shrink-warning')).toBeVisible()
+    })
+
+    it('says nothing about the bench when a match grows', async () => {
+      const user = userEvent.setup()
+      renderForm(EXISTING_MATCH)
+
+      await user.click(screen.getByLabelText('Jugadores por equipo'))
+      await user.click(await screen.findByRole('option', { name: '8' }))
+
+      expect(
+        screen.queryByTestId('match-form-shrink-warning'),
+      ).not.toBeInTheDocument()
+    })
+
+    // Nothing to shrink from, so the warning would be meaningless.
+    it('says nothing about the bench on a new match', async () => {
+      const user = userEvent.setup()
+      renderForm()
+
+      await user.click(screen.getByLabelText('Jugadores por equipo'))
+      await user.click(await screen.findByRole('option', { name: '5' }))
+
+      expect(
+        screen.queryByTestId('match-form-shrink-warning'),
+      ).not.toBeInTheDocument()
+    })
+  })
+
   it('calls onCancel without submitting', async () => {
     const user = userEvent.setup()
     const { onCancel, onSubmit } = renderForm()

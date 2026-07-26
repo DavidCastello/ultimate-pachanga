@@ -138,6 +138,14 @@ export function toInitials(
   return fallbackInitial ? fallbackInitial.toUpperCase() : '?'
 }
 
+/** The name on the registration form, as opposed to the alias on the card. */
+export function formatFullName(
+  firstName: string | null | undefined,
+  lastName: string | null | undefined,
+): string {
+  return [firstName?.trim(), lastName?.trim()].filter(Boolean).join(' ')
+}
+
 const POSITION_LABELS: Record<string, string> = {
   GK: 'Portero',
   CB: 'Central',

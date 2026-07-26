@@ -247,6 +247,7 @@ export type Database = {
           location: string
           photo_path: string | null
           played_at: string
+          players_per_team: number
           results_imported_at: string | null
           status: Database["public"]["Enums"]["match_status"]
           title: string
@@ -263,6 +264,7 @@ export type Database = {
           location: string
           photo_path?: string | null
           played_at: string
+          players_per_team?: number
           results_imported_at?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           title: string
@@ -279,6 +281,7 @@ export type Database = {
           location?: string
           photo_path?: string | null
           played_at?: string
+          players_per_team?: number
           results_imported_at?: string | null
           status?: Database["public"]["Enums"]["match_status"]
           title?: string
@@ -639,7 +642,22 @@ export type Database = {
       league_status: "active" | "inactive"
       match_status: "draft" | "scheduled" | "played" | "scored" | "cancelled"
       member_role: "admin" | "member"
-      pitch_formation: "2-3-1" | "3-3" | "3-2-1" | "1-3-2"
+      pitch_formation:
+        | "2-3-1"
+        | "3-3"
+        | "3-2-1"
+        | "1-3-2"
+        | "2-2"
+        | "1-2-1"
+        | "3-1"
+        | "2-1-2"
+        | "3-2"
+        | "2-2-1"
+        | "1-3-1"
+        | "3-3-1"
+        | "2-3-2"
+        | "3-2-2"
+        | "2-4-1"
       player_position:
         | "GK"
         | "CB"
@@ -787,7 +805,23 @@ export const Constants = {
       league_status: ["active", "inactive"],
       match_status: ["draft", "scheduled", "played", "scored", "cancelled"],
       member_role: ["admin", "member"],
-      pitch_formation: ["2-3-1", "3-3", "3-2-1", "1-3-2"],
+      pitch_formation: [
+        "2-3-1",
+        "3-3",
+        "3-2-1",
+        "1-3-2",
+        "2-2",
+        "1-2-1",
+        "3-1",
+        "2-1-2",
+        "3-2",
+        "2-2-1",
+        "1-3-1",
+        "3-3-1",
+        "2-3-2",
+        "3-2-2",
+        "2-4-1",
+      ],
       player_position: [
         "GK",
         "CB",

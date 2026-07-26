@@ -261,7 +261,7 @@ y el reparto que **minimiza esa diferencia**, con dos restricciones:
 
 - los dos equipos tienen el mismo número de jugadores (si la convocatoria es
   impar, el jugador de más va al local);
-- cuenta **toda** la convocatoria, banquillo incluido: un equipo son sus siete
+- cuenta **toda** la convocatoria, banquillo incluido: un equipo son sus
   titulares y sus suplentes, y quien entra en el minuto 20 también juega.
 
 ### Por qué el valor de mercado y no la valoración
@@ -319,8 +319,9 @@ Con los equipos ya decididos, cada lado se coloca así:
 
 - **portería** (posición 0): un jugador cuya posición preferida sea GK; si el
   equipo no tiene ninguno, el **más barato** de ese lado;
-- **el resto**, de más caro a más barato, ocupando las posiciones 1 a 6;
-- quien no cabe en los siete, **al banquillo**.
+- **el resto**, de más caro a más barato, ocupando las posiciones 1 en adelante;
+- quien no cabe en el campo, **al banquillo**. Caben tantos como jugadores por
+  equipo tenga el partido: de cinco a ocho, siete por defecto.
 
 ### Un ejemplo
 

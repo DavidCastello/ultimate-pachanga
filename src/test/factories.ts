@@ -87,6 +87,7 @@ export function buildMatch(overrides: Partial<MatchRow> = {}): MatchRow {
     away_team_name: 'Los Pachangueros',
     status: 'scheduled',
     photo_path: null,
+    players_per_team: 7,
     home_formation: '2-3-1',
     away_formation: '2-3-1',
     results_imported_at: null,

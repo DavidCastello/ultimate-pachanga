@@ -1,12 +1,20 @@
 import type { Database } from '@/types/database'
 
 /**
- * Pitch formations for Fútbol 7.
+ * Pitch formations, from five a side to eight.
  *
- * Seven a side: one goalkeeper and six outfielders. The goalkeeper is not part
- * of the formation name — they are always slot 0, always at the bottom of their
- * own half — so `2-3-1` describes the six outfielders as two defenders, three
- * midfielders and one forward.
+ * A pachanga is whatever size turned up, so the squad size is a property of the
+ * match (`matches.players_per_team`) and seven is only the most common case.
+ *
+ * The goalkeeper is not part of a formation name — they are always slot 0,
+ * always at the bottom of their own half — so the name describes the outfield
+ * lines alone and its own arithmetic gives the squad size: `2-3-1` is six
+ * outfielders plus a keeper, so seven a side, while `2-2` is five. No two shapes
+ * across the four sizes share a name, which is what lets one flat table below
+ * serve all of them and `squadSizeOf` recover the size from the name.
+ *
+ * Migration 015 derives the same number the same way in SQL, and keeps every
+ * match's formations consistent with its size.
  *
  * Coordinates are percentages of the pitch image, measured from its top-left.
  * Each team's pitch is drawn with their own goal at the bottom, so a larger `y`
@@ -15,20 +23,60 @@ import type { Database } from '@/types/database'
 
 export type Formation = Database['public']['Enums']['pitch_formation']
 
-export const DEFAULT_FORMATION: Formation = '2-3-1'
+/** Players a side, goalkeeper included. */
+export const SQUAD_SIZES = [5, 6, 7, 8] as const
 
-/** Outfield players per line, from the defensive line forwards. */
+export type SquadSize = (typeof SQUAD_SIZES)[number]
+
+/** What a match is unless someone says otherwise. Matches the column default. */
+export const DEFAULT_SQUAD_SIZE: SquadSize = 7
+
+/**
+ * Outfield players per line, from the defensive line forwards.
+ *
+ * Typed against the database enum, so adding a shape to `pitch_formation`
+ * without giving it a layout here is a compile error rather than an empty pitch.
+ */
 const FORMATION_LINES: Record<Formation, readonly number[]> = {
+  // Five a side: four outfielders.
+  '2-2': [2, 2],
+  '1-2-1': [1, 2, 1],
+  '3-1': [3, 1],
+
+  // Six a side: five outfielders.
+  '2-1-2': [2, 1, 2],
+  '3-2': [3, 2],
+  '2-2-1': [2, 2, 1],
+  '1-3-1': [1, 3, 1],
+
+  // Seven a side: six outfielders.
   '2-3-1': [2, 3, 1],
   '3-3': [3, 3],
   '3-2-1': [3, 2, 1],
   '1-3-2': [1, 3, 2],
+
+  // Eight a side: seven outfielders.
+  '3-3-1': [3, 3, 1],
+  '2-3-2': [2, 3, 2],
+  '3-2-2': [3, 2, 2],
+  '2-4-1': [2, 4, 1],
 }
 
 export const FORMATIONS = Object.keys(FORMATION_LINES) as Formation[]
 
-/** Total players per side, goalkeeper included. */
-export const SQUAD_SIZE = 7
+/** Players a side this shape describes, goalkeeper included. */
+export function squadSizeOf(formation: Formation): SquadSize {
+  const outfielders = FORMATION_LINES[formation].reduce(
+    (total, line) => total + line,
+    0,
+  )
+  return (outfielders + 1) as SquadSize
+}
+
+/** The shapes a match of this size can be arranged in, in menu order. */
+export function formationsFor(size: SquadSize): Formation[] {
+  return FORMATIONS.filter((formation) => squadSizeOf(formation) === size)
+}
 
 /** Slot the goalkeeper always occupies. */
 export const GOALKEEPER_SLOT = 0
@@ -45,6 +93,10 @@ export const GOALKEEPER_SLOT = 0
  * the card without moving these bands is what put the goalkeeper through the
  * bottom edge, so `formations.test.ts` asserts the arithmetic instead of
  * trusting it.
+ *
+ * The width is now just as tight as the height: the four across the middle of
+ * `2-4-1` sit 20% apart, so the same two percent of clearance is all there is
+ * horizontally too.
  */
 export const CARD_WIDTH_PERCENT = 18
 
@@ -62,7 +114,7 @@ const LINE_LEFT = 20
 const LINE_RIGHT = 80
 
 export interface PitchSlot {
-  /** 0 for the goalkeeper, then 1..6 forwards along each line. */
+  /** 0 for the goalkeeper, then 1 upwards along each line, at most 7. */
   slot: number
   /** Percentage from the left edge. */
   x: number

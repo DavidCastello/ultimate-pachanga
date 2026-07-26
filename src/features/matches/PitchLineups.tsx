@@ -13,7 +13,12 @@ import { PlayerCard } from '@/components/PlayerCard'
 import { TeamPitch, type PitchAssignment } from '@/features/matches/TeamPitch'
 import { useSlotSwapping } from '@/features/matches/useSlotSwapping'
 import { cn } from '@/lib/utils'
-import { FORMATIONS, getPitchSlots, type Formation } from '@/lib/formations'
+import {
+  formationsFor,
+  getPitchSlots,
+  squadSizeOf,
+  type Formation,
+} from '@/lib/formations'
 import type { LeagueMetricRow, PlayerCardData, TeamSide } from '@/types/domain'
 
 /**
@@ -109,14 +114,19 @@ export function PitchLineups({
     }
 
     for (const entry of entries) {
-      if (
+      const slotKey =
         entry.pitchSlot !== null &&
         (entry.teamSide === 'home' || entry.teamSide === 'away')
-      ) {
-        placement.set(
-          slotKeyFor(entry.teamSide, entry.pitchSlot),
-          entry.playerId,
-        )
+          ? slotKeyFor(entry.teamSide, entry.pitchSlot)
+          : null
+
+      // Every slot of both formations was seeded above, so a key that is missing
+      // is a slot this shape does not have — a player left over from a larger
+      // match. The database benches them (migration 015) and the refetch says
+      // so, but until it lands they belong on the bench here too: showing them
+      // nowhere would read as a player who had been dropped.
+      if (slotKey !== null && placement.has(slotKey)) {
+        placement.set(slotKey, entry.playerId)
       } else {
         placement.set(benchKeyFor(entry.playerId), entry.playerId)
       }
@@ -285,7 +295,10 @@ export function PitchLineups({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {FORMATIONS.map((option) => (
+                      {/* The size is read off the shape being shown rather than
+                          passed in: a formation names its own squad size, so the
+                          menu cannot offer a shape the match has no room for. */}
+                      {formationsFor(squadSizeOf(formation)).map((option) => (
                         <SelectItem key={option} value={option}>
                           {option}
                         </SelectItem>

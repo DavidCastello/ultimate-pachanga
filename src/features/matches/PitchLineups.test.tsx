@@ -297,7 +297,7 @@ describe('PitchLineups', () => {
   })
 
   describe('formation', () => {
-    it('offers the four layouts to an administrator', async () => {
+    it('offers the four seven-a-side layouts to an administrator', async () => {
       const user = userEvent.setup()
       renderLineups()
 
@@ -308,6 +308,59 @@ describe('PitchLineups', () => {
           await screen.findByRole('option', { name: option }),
         ).toBeInTheDocument()
       }
+    })
+
+    // The menu is derived from the shape on show, so it cannot offer a layout
+    // for a squad size this match does not play.
+    it('offers only the layouts of its own squad size', async () => {
+      const user = userEvent.setup()
+      renderLineups({ homeFormation: '2-2' })
+
+      await user.click(screen.getByLabelText('Formación de Los Cracks'))
+
+      for (const option of ['2-2', '1-2-1', '3-1']) {
+        expect(
+          await screen.findByRole('option', { name: option }),
+        ).toBeInTheDocument()
+      }
+      for (const option of ['2-3-1', '3-3-1']) {
+        expect(
+          screen.queryByRole('option', { name: option }),
+        ).not.toBeInTheDocument()
+      }
+    })
+
+    it('draws five positions for a five-a-side shape', () => {
+      renderLineups({ homeFormation: '2-2' })
+
+      const homeSlots = screen
+        .getAllByTestId('pitch-slot')
+        .filter((slot) => slot.dataset.slotKey?.startsWith('home:'))
+
+      expect(homeSlots).toHaveLength(5)
+    })
+
+    // The state a shrunk match is in for as long as the refetch takes.
+    it('benches a player whose slot the shape no longer has', () => {
+      renderLineups({ homeFormation: '2-2' })
+
+      const bench = screen.getByRole('list')
+
+      // Slots 5 and 6 of the seven-a-side line-up do not exist at five a side.
+      expect(within(bench).getByText('Medio Tres')).toBeVisible()
+      expect(within(bench).getByText('Delantero Local')).toBeVisible()
+      // And the one who was already benched is still there.
+      expect(within(bench).getByText('Suplente')).toBeVisible()
+    })
+
+    it('draws eight positions for an eight-a-side shape', () => {
+      renderLineups({ homeFormation: '2-4-1' })
+
+      const homeSlots = screen
+        .getAllByTestId('pitch-slot')
+        .filter((slot) => slot.dataset.slotKey?.startsWith('home:'))
+
+      expect(homeSlots).toHaveLength(8)
     })
 
     it('reports a formation change', async () => {
