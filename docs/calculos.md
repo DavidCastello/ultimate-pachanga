@@ -154,7 +154,7 @@ mismo con una sola fila. Cualquiera de las dos vías marca el partido como
 
 De aquí en adelante nada se guarda: son vistas. Solo cuentan los partidos con
 estado `scored`, así que un partido programado que nadie ha jugado nunca arrastra
-a nadie hacia abajo.
+a nadie hacia abajo. La sección 12 detalla qué estados cuentan y desde cuándo.
 
 | Cifra                        | Cómo se calcula                                      |
 | ---------------------------- | ---------------------------------------------------- |
@@ -474,7 +474,99 @@ negativos.
 En pantalla, las puntuaciones se muestran con uno o dos decimales y con coma
 decimal, y los valores de mercado abreviados.
 
-## 12. Qué pasa exactamente cuando editas un resultado
+## 12. Cuándo empieza a contar un partido
+
+### El estado del partido es lo único que lo decide
+
+Todas las vistas filtran por `status = 'scored'`. No hay ningún otro criterio: ni
+la fecha, ni si el partido ya se jugó, ni si hay convocatoria.
+
+| Estado      | Qué significa                             | ¿Cuenta para las cifras? |
+| ----------- | ----------------------------------------- | ------------------------ |
+| `draft`     | borrador, todavía no anunciado            | No                       |
+| `scheduled` | programado, la gente se apunta            | No                       |
+| `played`    | se jugó, pero **nadie ha importado nada** | **No**                   |
+| `scored`    | tiene resultados importados               | **Sí, el único que sí**  |
+| `cancelled` | cancelado                                 | No                       |
+
+La fila que sorprende es `played`. Un partido puede haberse jugado, estar todo el
+mundo en casa y seguir sin aportar absolutamente nada a ninguna puntuación: para
+la aplicación es una nota en el calendario. Solo aporta cuando alguien importa
+los resultados, y es la propia importación la que pone `scored` — ese estado no
+se elige nunca a mano, no aparece en el desplegable del formulario.
+
+### Un partido en curso empieza a contar con el primer jugador puntuado
+
+`import_match_scores` no exige la convocatoria entera. Acepta las filas que le
+mandes, y al final marca el partido como `scored`. Así que puntuar a **un solo
+jugador** — el caso normal cuando se va rellenando el resultado desde la web,
+uno a uno — ya mete el partido en todas las estadísticas.
+
+Lo que pasa a partir de ese momento:
+
+- Ese jugador tiene ya una fila: el partido le cuenta en `matches_played`, entra
+  en su media, y su `latest_score` pasa a ser el de este partido.
+- El resto de la convocatoria **no aporta nada de este partido**. No es que
+  puntúen 0: es que no tienen fila. Su media y su valor no se mueven.
+- La **valoración de toda la liga sí se mueve**, porque es relativa a la media y
+  la desviación de las últimas puntuaciones de todos, y una de ellas acaba de
+  cambiar. Es el mismo efecto descrito en la sección 13, pero disparado a mitad
+  de un partido a medio puntuar.
+
+Es decir: los resultados de un partido en curso afectan a las cifras **en cuanto
+se guarda cada jugador**, no al terminar de puntuar a todos. Un partido a medio
+puntuar no arrastra a nadie hacia abajo, pero sí desplaza las valoraciones.
+
+### Un cambio en un partido antiguo: inmediato en la base de datos
+
+Sí, es inmediato, y conviene separar los dos niveles porque solo uno de ellos es
+instantáneo de verdad:
+
+| Nivel             | Cuándo se ve el número nuevo                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| Base de datos     | En la siguiente lectura. Son vistas: no hay nada que recalcular, ni trigger, ni proceso nocturno |
+| Navegador         | La pantalla que hizo el cambio invalida su caché y vuelve a pedir los datos, así que al instante |
+| Navegador de otro | Sigue viendo los números viejos hasta que navegue o recargue                                     |
+
+Ese último caso es una decisión, no un descuido: `refetchOnWindowFocus` está
+apagado y la caché dura 30 segundos (`src/app/providers.tsx`). Para una liga de
+amigos, refrescar cada vez que alguien cambia de ventana es ruido. Si dos
+personas están puntuando el mismo partido a la vez, cada una ve sus propios
+cambios al momento y los de la otra al recargar.
+
+### Lo que no toca el estado
+
+Editar los datos del partido — título, lugar, hora, nombres de los equipos,
+fotografía — **no cambia su estado**, y por tanto no cambia ninguna puntuación.
+Subir una foto escribe solo `photo_path`.
+
+Esto merece decirse porque durante un tiempo no fue verdad. El desplegable de
+estado no puede ofrecer `scored`, y el formulario caía en `played` al abrir un
+partido puntuado: editarlo para cualquier cosa, aunque fuera solo ponerle la
+foto, lo sacaba de `scored` y con ello de todas las estadísticas, sin avisar. La
+liga entera aparecía sin rankings ni valoraciones. Ahora un estado que el
+desplegable no puede mostrar se conserva tal cual y se muestra como texto, no
+como control.
+
+La consecuencia es que el estado de un partido puntuado ya no se cambia desde la
+aplicación. Para descontar un partido o cancelarlo una vez puntuado hay que
+hacerlo en SQL a mano — deliberadamente incómodo, porque mueve las cifras de
+todo el mundo.
+
+### Cómo comprobar qué partidos cuentan
+
+`results_imported_at` lo dice: lo escribe `import_match_scores` junto al estado,
+así que un partido con fecha de importación y un estado distinto de `scored` es
+una anomalía.
+
+```sql
+select title, status, results_imported_at, played_at
+  from public.matches
+ where league_id = '11111111-1111-4111-8111-111111111111'
+ order by played_at;
+```
+
+## 13. Qué pasa exactamente cuando editas un resultado
 
 Al guardar un cambio en un jugador (métrica, gol, resultado o atributo) se
 reescriben su `base_score`, `attribute_points` y `final_score`, y sus enlaces de
@@ -500,7 +592,7 @@ Y dos cosas que **no** se recalculan solas:
 - Lo mismo con las métricas: cambiar rangos o añadir métricas no reescribe
   `base_score` ni `final_score` de lo ya importado.
 
-## 13. Dónde vive cada fórmula
+## 14. Dónde vive cada fórmula
 
 La base de datos es la fuente de la verdad. El frontend solo tiene un espejo,
 para poder previsualizar antes de escribir.
