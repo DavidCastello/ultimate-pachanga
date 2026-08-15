@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { MarketValue } from '@/components/MarketValue'
 import { PlayerCard } from '@/components/PlayerCard'
 import { TeamPitch, type PitchAssignment } from '@/features/matches/TeamPitch'
 import { useSlotSwapping } from '@/features/matches/useSlotSwapping'
@@ -37,6 +38,12 @@ export interface LineupEntry {
   teamSide: TeamSide
   pitchSlot: number | null
   player: PlayerCardData
+  /**
+   * What this player counts for towards their side's total: the value frozen
+   * when the match was scored, or their current one while it is still to be
+   * played. Resolved by the caller, which is the only place that knows which.
+   */
+  marketValueGbp: number
 }
 
 /** A slot's occupant, or a bench player, addressed by key. */
@@ -83,6 +90,13 @@ interface PitchLineupsProps {
   onFormationChange: (side: 'home' | 'away', formation: Formation) => void
   /** Called with only the players whose side or slot actually changed. */
   onLineupChange: (changes: LineupChange[]) => void
+  /**
+   * Whether the values being summed are the ones frozen at kickoff or today's.
+   *
+   * Only decides the wording. Which figure each player contributes was settled
+   * before it got here, in `LineupEntry.marketValueGbp`.
+   */
+  valuation: 'frozen' | 'live'
 }
 
 export function PitchLineups({
@@ -96,6 +110,7 @@ export function PitchLineups({
   canChangeFormation,
   onFormationChange,
   onLineupChange,
+  valuation,
 }: PitchLineupsProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -141,6 +156,38 @@ export function PitchLineups({
     () => new Map(entries.map((entry) => [entry.playerId, entry.player])),
     [entries],
   )
+
+  const valueByPlayerId = useMemo(
+    () =>
+      new Map(entries.map((entry) => [entry.playerId, entry.marketValueGbp])),
+    [entries],
+  )
+
+  /**
+   * What each side on the pitch is worth.
+   *
+   * Read off `placement` rather than off `entries` so it answers while a drag
+   * is still optimistic: moving somebody across and watching the two figures
+   * converge is the whole point of showing them.
+   *
+   * The bench does not count. Eleven players cannot be on at once, and a team
+   * carrying an expensive substitute is not fielding a stronger side than the
+   * scoreline says.
+   */
+  const teamValues = useMemo(() => {
+    const total = (side: 'home' | 'away') =>
+      getPitchSlots(side === 'home' ? homeFormation : awayFormation).reduce(
+        (sum, slot) => {
+          const playerId = placement.get(slotKeyFor(side, slot.slot))
+          return sum + (playerId ? (valueByPlayerId.get(playerId) ?? 0) : 0)
+        },
+        0,
+      )
+
+    return { home: total('home'), away: total('away') }
+  }, [placement, homeFormation, awayFormation, valueByPlayerId])
+
+  const valueGap = Math.abs(teamValues.home - teamValues.away)
 
   /**
    * Finds the drop target under a point.
@@ -265,6 +312,16 @@ export function PitchLineups({
         )
       ) : null}
 
+      {/* The audit, in one line: what the two sides on the pitch are worth and
+          how far apart that leaves them. */}
+      <p className="text-xs text-muted-foreground" data-testid="team-value-gap">
+        Diferencia <MarketValue value={valueGap} className="text-foreground" />{' '}
+        ·{' '}
+        {valuation === 'frozen'
+          ? 'valor al inicio del partido'
+          : 'valor actual, banquillo aparte'}
+      </p>
+
       <div className="grid gap-4 sm:grid-cols-2">
         {(['home', 'away'] as const).map((side) => {
           const formation = side === 'home' ? homeFormation : awayFormation
@@ -272,13 +329,16 @@ export function PitchLineups({
 
           return (
             <div key={side} className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-2">
-                <h3
-                  className="min-w-0 truncate text-sm font-bold"
-                  title={teamName}
-                >
-                  {teamName}
-                </h3>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h3 className="truncate text-sm font-bold" title={teamName}>
+                    {teamName}
+                  </h3>
+                  <MarketValue
+                    value={teamValues[side]}
+                    className="text-xs text-muted-foreground"
+                  />
+                </div>
 
                 {canChangeFormation ? (
                   <Select

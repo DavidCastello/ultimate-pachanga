@@ -99,7 +99,12 @@ export function LeaguePage() {
     queryFn: () => fetchMatches(membership!.leagueId),
   })
 
-  const activePlayers = (players ?? []).filter((player) => player.isActive)
+  // Guests play the matches but are not in the league, so nothing on this page
+  // counts them: not the tiles, not the leaderboards, not the palmarés. One
+  // filter covers all three because everything below hangs off it.
+  const activePlayers = (players ?? []).filter(
+    (player) => player.isActive && !player.isGuest,
+  )
   const rankedPlayers = activePlayers.filter(
     (player) => player.matchesPlayed > 0,
   )

@@ -8,6 +8,7 @@ spreadsheet. Run once against the deployed database, in order.
 | `01_roster.sql`   | `players`                                  |   22 |
 | `02_fixtures.sql` | `matches`, `match_players`                 | 4+59 |
 | `03_results.sql`  | `player_match_scores` and their attributes |   59 |
+| `04_guests.sql`   | `players.is_guest`                         |    5 |
 
 **These are not migrations, on purpose.** A migration is schema: something every
 database carrying this application must have, applied automatically and never
@@ -26,7 +27,7 @@ rehearses the deploy. Two development-only files bracket them —
 any counterpart in production, and seed files are never carried by
 `supabase db push`.
 
-All three are re-runnable. They match on natural keys — `player_code`, fixed
+All four are re-runnable. They match on natural keys — `player_code`, fixed
 match ids, `(match_id, player_id)` — so a second run corrects rather than
 duplicates. `01_roster.sql` never touches `user_id`, `avatar_path` or
 `is_active`, and `02_fixtures.sql` leaves an arrangement alone once anyone has
@@ -41,6 +42,7 @@ in the app is overwritten.
 3. 01_roster.sql
 4. 02_fixtures.sql
 5. 03_results.sql
+6. 04_guests.sql
 ```
 
 Step 2 is a real dependency, not a convention. `03_results.sql` calls
@@ -86,9 +88,18 @@ export PROD_DB_URL='postgresql://postgres.<ref>:<password>@aws-0-eu-west-1.poole
 make prod-load
 ```
 
-`make prod-load` runs all three in order and stops at the first failure.
-`make prod-roster`, `make prod-fixtures` and `make prod-results` run them
-individually.
+`make prod-load` runs all four in order and stops at the first failure.
+`make prod-roster`, `make prod-fixtures`, `make prod-results` and
+`make prod-guests` run them individually.
+
+**Read the notices from `04_guests.sql`.** Three of the five guests are in the
+roster and are matched on `player_code`; the other two registered themselves
+through the app, so it matches them on the name the cards display. If one of
+those two has since been renamed, the script says so and carries on rather than
+failing — nothing downstream depends on it, and the fix is the _Jugador
+invitado_ switch in **Administración › Jugadores**. It is also the only one of
+the four that warns instead of aborting, because those two players do not exist
+on a developer's machine at all.
 
 Keep `PROD_DB_URL` in the shell or in a file git ignores. It contains the
 database password, which is a full-access credential — it is not a publishable

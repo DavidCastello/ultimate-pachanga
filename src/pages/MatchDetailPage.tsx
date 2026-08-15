@@ -216,10 +216,27 @@ export function MatchDetailPage() {
           teamSide: member.teamSide,
           pitchSlot: member.pitchSlot,
           player,
+          // The value frozen when the match was scored, falling back to the
+          // player's current one. Null means either that the match has not been
+          // played, where current is the only sensible figure, or that it was
+          // played before the column existed — the four fixtures already in the
+          // books. Those cannot be recovered, so they read as current too, and
+          // the caption says which is on show.
+          marketValueGbp: member.marketValueGbp ?? player.marketValueGbp,
         }
       })
       .filter((entry): entry is LineupEntry => entry !== null)
   }, [squad, players])
+
+  /**
+   * Whether the figures on the pitch are the ones this match was played at.
+   *
+   * True only when the squad actually carries them. A scored match whose
+   * values were never frozen must not claim they were.
+   */
+  const valuation = squad.some((member) => member.marketValueGbp !== null)
+    ? 'frozen'
+    : 'live'
 
   /**
    * Who may do what, all of it hanging off one question: has it been played?
@@ -695,6 +712,7 @@ export function MatchDetailPage() {
                 persistFormation.mutate({ side, formation })
               }
               onLineupChange={(changes) => persistLineup.mutate(changes)}
+              valuation={valuation}
             />
           )}
         </CardContent>

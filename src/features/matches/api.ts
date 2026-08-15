@@ -49,6 +49,13 @@ export interface SquadMember {
   teamSide: TeamSide
   /** Null when the player is convocated but not placed on the pitch. */
   pitchSlot: number | null
+  /**
+   * What the player was worth going into this match, frozen when it was
+   * scored. Null while the match is still to be played, and on the fixtures
+   * that were already in the books before the column existed — in both cases
+   * the caller falls back to the player's current value.
+   */
+  marketValueGbp: number | null
 }
 
 export async function fetchSquad(matchId: string): Promise<SquadMember[]> {
@@ -57,6 +64,7 @@ export async function fetchSquad(matchId: string): Promise<SquadMember[]> {
     .select(
       `team_side,
        pitch_slot,
+       market_value_gbp,
        players!inner (
          id, player_code, first_name, last_name, nickname, preferred_position
        )`,
@@ -77,6 +85,7 @@ export async function fetchSquad(matchId: string): Promise<SquadMember[]> {
       preferredPosition: row.players.preferred_position,
       teamSide: row.team_side,
       pitchSlot: row.pitch_slot,
+      marketValueGbp: row.market_value_gbp,
     }))
     .sort((left, right) =>
       left.displayName.localeCompare(right.displayName, 'es'),

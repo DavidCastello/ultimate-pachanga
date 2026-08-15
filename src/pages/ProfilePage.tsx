@@ -173,6 +173,7 @@ export function ProfilePage() {
       <PlayerFormDialog
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
+        scope="self"
         player={player}
         onSubmit={(input) => saveProfile.mutateAsync(input)}
       />

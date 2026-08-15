@@ -125,11 +125,27 @@ export async function fetchPlayerHistory(
   }))
 }
 
+/** What a player may say about themselves. */
 export interface PlayerInput {
   firstName: string
   lastName: string
   nickname: string | null
   preferredPosition: PlayerPosition
+}
+
+/**
+ * That, plus the two judgements only an administrator makes.
+ *
+ * Separate types rather than optional fields, because the split is the
+ * authorization boundary: `updateOwnPlayerProfile` below goes through a
+ * function whose argument list simply has nowhere to put these, and a member
+ * pricing themselves or excusing themselves from the league table is exactly
+ * what that function exists to prevent.
+ */
+export interface AdminPlayerInput extends PlayerInput {
+  isGuest: boolean
+  /** Null when the administrator did not venture a figure. */
+  estimatedMarketValueGbp: number | null
 }
 
 /**
@@ -151,7 +167,7 @@ function generatePlayerCode(): string {
 
 export async function createPlayer(
   leagueId: string,
-  input: PlayerInput,
+  input: AdminPlayerInput,
 ): Promise<string> {
   // A collision is possible but vanishingly unlikely at this scale; the unique
   // constraint on (league_id, player_code) is what actually guarantees it.
@@ -164,6 +180,8 @@ export async function createPlayer(
       last_name: input.lastName,
       nickname: input.nickname,
       preferred_position: input.preferredPosition,
+      is_guest: input.isGuest,
+      estimated_market_value_gbp: input.estimatedMarketValueGbp,
     })
     .select('id')
     .single()
@@ -174,7 +192,7 @@ export async function createPlayer(
 
 export async function updatePlayer(
   playerId: string,
-  input: PlayerInput,
+  input: AdminPlayerInput,
 ): Promise<void> {
   const { error } = await supabase
     .from('players')
@@ -183,6 +201,8 @@ export async function updatePlayer(
       last_name: input.lastName,
       nickname: input.nickname,
       preferred_position: input.preferredPosition,
+      is_guest: input.isGuest,
+      estimated_market_value_gbp: input.estimatedMarketValueGbp,
     })
     .eq('id', playerId)
 

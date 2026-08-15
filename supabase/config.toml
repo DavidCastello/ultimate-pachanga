@@ -79,9 +79,9 @@ enabled = true
 #   00_dev_owner          the owner's account, so the app is reachable after a
 #                         reset and so the results import below has an
 #                         administrator to run as
-#   production/01..03     the real roster, fixtures and results — the very same
-#                         files that load production, so every `db reset`
-#                         rehearses the deploy
+#   production/01..04     the real roster, fixtures, results and guests — the
+#                         very same files that load production, so every
+#                         `db reset` rehearses the deploy
 #   02_dev_upcoming_match one fixture still to be played, which the real league
 #                         does not have and half the app needs
 #
@@ -92,6 +92,7 @@ sql_paths = [
   "./production/01_roster.sql",
   "./production/02_fixtures.sql",
   "./production/03_results.sql",
+  "./production/04_guests.sql",
   "./seeds/02_dev_upcoming_match.sql",
 ]
 
