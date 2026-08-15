@@ -17,7 +17,7 @@ LOCAL_ENV := .env.local
 # One-off data loads for the deployed database. Deliberately not migrations;
 # see supabase/production/README.md.
 PROD_DIR := supabase/production
-PROD_SCRIPTS := 01_roster 02_fixtures 03_results
+PROD_SCRIPTS := 01_roster 02_fixtures 03_results 04_guests
 LOCAL_DB_CONTAINER := supabase_db_ultimate-pachanga
 LOCAL_KONG_CONTAINER := supabase_kong_ultimate-pachanga
 
@@ -25,8 +25,8 @@ LOCAL_KONG_CONTAINER := supabase_kong_ultimate-pachanga
 
 .PHONY: help install dev dev-local build preview lint format check test \
         test-watch coverage db-start db-stop db-status db-reset db-test \
-        db-types verify prod-roster prod-fixtures prod-results prod-load \
-        prod-dry-run
+        db-types verify prod-roster prod-fixtures prod-results prod-guests \
+        prod-load prod-dry-run
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -178,7 +178,13 @@ prod-results: ## Import the real match results
 	$(require_prod_db_url)
 	psql "$$PROD_DB_URL" -v ON_ERROR_STOP=1 -f $(PROD_DIR)/03_results.sql
 
-prod-load: prod-roster prod-fixtures prod-results ## All three, in order
+# Two of the five registered themselves and are matched by name rather than by
+# code, so read the notices: they say who was found and who was not.
+prod-guests: ## Flag the players who are guests rather than league members
+	$(require_prod_db_url)
+	psql "$$PROD_DB_URL" -v ON_ERROR_STOP=1 -f $(PROD_DIR)/04_guests.sql
+
+prod-load: prod-roster prod-fixtures prod-results prod-guests ## All four, in order
 
 # `make db-reset` already runs these three as part of seeding, so this is not
 # how you get the data locally — it is how you prove a *second* run corrects

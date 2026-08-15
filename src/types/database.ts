@@ -176,6 +176,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          market_value_gbp: number | null
           match_id: string
           pitch_slot: number | null
           player_id: string
@@ -184,6 +185,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          market_value_gbp?: number | null
           match_id: string
           pitch_slot?: number | null
           player_id: string
@@ -192,6 +194,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          market_value_gbp?: number | null
           match_id?: string
           pitch_slot?: number | null
           player_id?: string
@@ -418,9 +421,11 @@ export type Database = {
         Row: {
           avatar_path: string | null
           created_at: string
+          estimated_market_value_gbp: number | null
           first_name: string
           id: string
           is_active: boolean
+          is_guest: boolean
           last_name: string
           league_id: string
           nickname: string | null
@@ -432,9 +437,11 @@ export type Database = {
         Insert: {
           avatar_path?: string | null
           created_at?: string
+          estimated_market_value_gbp?: number | null
           first_name: string
           id?: string
           is_active?: boolean
+          is_guest?: boolean
           last_name: string
           league_id: string
           nickname?: string | null
@@ -446,9 +453,11 @@ export type Database = {
         Update: {
           avatar_path?: string | null
           created_at?: string
+          estimated_market_value_gbp?: number | null
           first_name?: string
           id?: string
           is_active?: boolean
+          is_guest?: boolean
           last_name?: string
           league_id?: string
           nickname?: string | null
@@ -478,9 +487,11 @@ export type Database = {
           career_average: number | null
           created_at: string | null
           display_name: string | null
+          estimated_market_value_gbp: number | null
           first_name: string | null
           id: string | null
           is_active: boolean | null
+          is_guest: boolean | null
           last_name: string | null
           latest_score: number | null
           league_id: string | null
