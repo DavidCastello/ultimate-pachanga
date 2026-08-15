@@ -18,11 +18,13 @@ function entry(
   name: string,
   teamSide: TeamSide,
   pitchSlot: number | null,
+  marketValueGbp = 1_000_000,
 ): LineupEntry {
   return {
     playerId: id,
     teamSide,
     pitchSlot,
+    marketValueGbp,
     player: buildPlayerCard({
       id,
       displayName: name,
@@ -32,7 +34,13 @@ function entry(
   }
 }
 
-/** A full home side, a full away side, and one player on the bench. */
+/**
+ * A full home side, a full away side, and one player on the bench.
+ *
+ * Every value is a round million so the totals below can be read off the
+ * line-up rather than computed: seven on at home, two away, and an
+ * extravagant substitute who must not count for either.
+ */
 const ENTRIES: LineupEntry[] = [
   entry('h0', 'Portero Local', 'home', 0),
   entry('h1', 'Defensa Uno', 'home', 1),
@@ -43,7 +51,7 @@ const ENTRIES: LineupEntry[] = [
   entry('h6', 'Delantero Local', 'home', 6),
   entry('a0', 'Portero Visitante', 'away', 0),
   entry('a1', 'Visitante Uno', 'away', 1),
-  entry('b1', 'Suplente', 'home', null),
+  entry('b1', 'Suplente', 'home', null, 50_000_000),
 ]
 
 function renderLineups(
@@ -64,6 +72,7 @@ function renderLineups(
       canChangeFormation
       onFormationChange={onFormationChange}
       onLineupChange={onLineupChange}
+      valuation="live"
       {...overrides}
     />,
   )
@@ -127,6 +136,80 @@ describe('PitchLineups', () => {
     renderLineups()
 
     expect(screen.getByLabelText(/Portero Local, Portería/)).toBeInTheDocument()
+  })
+
+  describe('what each side is worth', () => {
+    /**
+     * The figure printed under a team's name.
+     *
+     * Scoped to the heading's own block rather than searched for globally: the
+     * same amount can legitimately appear twice — a side's total and the gap
+     * between the two sides — and a bare query would not say which it found.
+     */
+    function valueUnder(teamName: string): string | null {
+      const header = screen.getByRole('heading', {
+        name: teamName,
+      }).parentElement!
+      return within(header).getByTitle(/£/).textContent
+    }
+
+    function gap(): string | null {
+      return within(screen.getByTestId('team-value-gap')).getByTitle(/£/)
+        .textContent
+    }
+
+    it('sums only the players on the pitch', () => {
+      renderLineups()
+
+      // Seven at home and two away, at a million each. The £50 M substitute is
+      // in neither figure, which is the point of the assertion.
+      expect(valueUnder('Los Cracks')).toBe('£7,00 M')
+      expect(valueUnder('Los Pachangueros')).toBe('£2,00 M')
+    })
+
+    it('shows how far apart the two sides are', () => {
+      renderLineups()
+      expect(gap()).toBe('£5,00 M')
+    })
+
+    it('says whether the figures are current or from the day', () => {
+      renderLineups()
+      expect(screen.getByText(/valor actual/)).toBeInTheDocument()
+    })
+
+    it('says so when the values were frozen at kickoff', () => {
+      renderLineups({ valuation: 'frozen' })
+      expect(
+        screen.getByText(/valor al inicio del partido/),
+      ).toBeInTheDocument()
+    })
+
+    it('follows a player moved to the other side straight away', async () => {
+      const user = userEvent.setup()
+      renderLineups()
+
+      await user.click(screen.getByLabelText(/^Defensa Uno,/))
+      const awaySlot = screen
+        .getAllByTestId('pitch-slot')
+        .find((slot) => slot.dataset.slotKey === 'away:6')!
+      await user.click(within(awaySlot).getByRole('button'))
+
+      // Six against three, without waiting for the write to come back.
+      expect(valueUnder('Los Cracks')).toBe('£6,00 M')
+      expect(valueUnder('Los Pachangueros')).toBe('£3,00 M')
+      expect(gap()).toBe('£3,00 M')
+    })
+
+    it('leaves a bench player out however expensive they are', async () => {
+      const user = userEvent.setup()
+      renderLineups()
+
+      // The £50 M substitute comes on for a £1 M striker.
+      await user.click(screen.getByLabelText(/^Suplente, en el banquillo/))
+      await user.click(screen.getByLabelText(/^Delantero Local,/))
+
+      expect(valueUnder('Los Cracks')).toBe('£56 M')
+    })
   })
 
   describe('swapping by click', () => {
