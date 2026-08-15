@@ -49,6 +49,19 @@ export interface PlayerCardData {
   preferredPosition: PlayerPosition
   avatarPath: string | null
   isActive: boolean
+  /**
+   * Plays the matches, sits outside the league.
+   *
+   * A guest is scored, valued and picked like anybody else and is left out of
+   * the standings and the statistics.
+   */
+  isGuest: boolean
+  /**
+   * What an administrator reckoned the player was worth before anyone had
+   * scored them. Null when nobody said, and ignored once they have played —
+   * `marketValueGbp` is the figure to show.
+   */
+  estimatedMarketValueGbp: number | null
   /** The account that plays as this player, or null while unclaimed. */
   userId: string | null
   matchesPlayed: number
@@ -106,6 +119,12 @@ export function toPlayerCardData(row: PlayerCardRow): PlayerCardData | null {
     preferredPosition: row.preferred_position,
     avatarPath: row.avatar_path,
     isActive: row.is_active ?? true,
+    isGuest: row.is_guest ?? false,
+    // Coalesced rather than passed through: a view row is also missing this
+    // column entirely when the database is a migration behind the app, and
+    // undefined leaking into a `number | null` field reaches the form as the
+    // string "undefined".
+    estimatedMarketValueGbp: row.estimated_market_value_gbp ?? null,
     userId: row.user_id,
     matchesPlayed: row.matches_played ?? 0,
     careerAverage: row.career_average,

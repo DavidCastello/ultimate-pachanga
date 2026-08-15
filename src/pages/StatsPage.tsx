@@ -158,10 +158,15 @@ export function StatsPage() {
     queryFn: () => fetchPlayerCards(membership!.leagueId),
   })
 
+  // Guests are left out of every tab, the evolution chart included: `ranked` is
+  // also the list its series are picked from. Their scores still count towards
+  // the league mean each rating is measured against, here as in the database —
+  // they played the match, and taking them out would restate everybody else's.
   const ranked = useMemo(
     () =>
       (players ?? []).filter(
-        (player) => player.isActive && player.matchesPlayed > 0,
+        (player) =>
+          player.isActive && !player.isGuest && player.matchesPlayed > 0,
       ),
     [players],
   )

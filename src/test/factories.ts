@@ -59,6 +59,8 @@ export function buildPlayerCard(
     preferredPosition: 'CM',
     avatarPath: null,
     isActive: true,
+    isGuest: false,
+    estimatedMarketValueGbp: null,
     userId: null,
     totalGoals: 3,
     totalVictories: 1.5,

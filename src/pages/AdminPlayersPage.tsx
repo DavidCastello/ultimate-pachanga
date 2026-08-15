@@ -34,7 +34,7 @@ import {
   setPlayerActive,
   updatePlayer,
   uploadPlayerAvatar,
-  type PlayerInput,
+  type AdminPlayerInput,
 } from '@/features/players/api'
 import { useMembership } from '@/features/league/useLeague'
 import { getAvatarUrl } from '@/lib/supabase'
@@ -73,7 +73,7 @@ export function AdminPlayersPage() {
   }
 
   const savePlayer = useMutation({
-    mutationFn: async (input: PlayerInput) => {
+    mutationFn: async (input: AdminPlayerInput) => {
       if (editingPlayer) {
         await updatePlayer(editingPlayer.id, input)
       } else {
@@ -230,6 +230,9 @@ export function AdminPlayersPage() {
                         {player.userId ? null : (
                           <Badge variant="outline">Sin cuenta</Badge>
                         )}
+                        {player.isGuest ? (
+                          <Badge variant="outline">Invitado</Badge>
+                        ) : null}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -298,6 +301,7 @@ export function AdminPlayersPage() {
       <PlayerFormDialog
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
+        scope="admin"
         player={editingPlayer}
         onSubmit={(input) => savePlayer.mutateAsync(input)}
       />
