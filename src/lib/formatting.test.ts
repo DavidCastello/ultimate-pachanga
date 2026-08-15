@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   formatAttributePoints,
   formatMarketValue,
   formatMarketValueExact,
+  formatMatchRelative,
   formatPosition,
   formatScore,
   formatVictories,
@@ -152,5 +153,49 @@ describe('formatPosition', () => {
 
   it('has no value for a missing position', () => {
     expect(formatPosition(null)).toBe('—')
+  })
+})
+
+/**
+ * Which side of "now" a match falls on decides the wording, so every case here
+ * fixes the clock. Left untested, this is the kind of function whose future
+ * branch quietly stops being exercised the day the fixture date goes past.
+ */
+describe('formatMatchRelative', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  function freeze(now: string) {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(now))
+  }
+
+  it('counts forward to a match still to be played', () => {
+    freeze('2026-07-29T18:00:00.000Z')
+    expect(formatMatchRelative('2026-08-01T18:00:00.000Z')).toBe('en 3 días')
+  })
+
+  it('counts back from one already played', () => {
+    freeze('2026-08-04T18:00:00.000Z')
+    expect(formatMatchRelative('2026-08-01T18:00:00.000Z')).toBe('hace 3 días')
+  })
+
+  // isPast is a strict comparison, so the instant of kick-off itself still
+  // counts as upcoming and the wording flips a millisecond later. Documented
+  // rather than corrected: it is one instant, and both readings are true.
+  it('flips at the kick-off, not before it', () => {
+    freeze('2026-08-01T18:00:00.000Z')
+    expect(formatMatchRelative('2026-08-01T18:00:00.000Z')).toBe(
+      'en 0 segundos',
+    )
+
+    freeze('2026-08-01T18:00:00.001Z')
+    expect(formatMatchRelative('2026-08-01T18:00:00.000Z')).toMatch(/^hace /)
+  })
+
+  it('speaks Spanish rather than the runtime default', () => {
+    freeze('2026-08-01T18:00:00.000Z')
+    expect(formatMatchRelative('2026-09-01T18:00:00.000Z')).toBe('en 1 mes')
   })
 })

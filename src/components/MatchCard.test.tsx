@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 import { MatchCard } from '@/components/MatchCard'
 import { renderWithProviders } from '@/test/render'
@@ -13,6 +13,23 @@ vi.mock('@/lib/supabase', () => ({
   MATCH_PHOTOS_BUCKET: 'match-photos',
 }))
 
+/**
+ * The card says how long until a match, so "now" has to be fixed or the test
+ * expires. The fixture kicks off on 1 August 2026; three days before that puts
+ * it in the future, which is the wording being asserted.
+ *
+ * Only Date is faked. Faking the timer functions too would leave React's
+ * scheduler and Testing Library waiting on a clock nobody advances.
+ */
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-07-29T18:00:00.000Z'))
+})
+
+afterAll(() => {
+  vi.useRealTimers()
+})
+
 describe('MatchCard', () => {
   it('shows the fixture, when it is played and where', () => {
     renderWithProviders(<MatchCard match={buildMatch()} />)
@@ -21,7 +38,15 @@ describe('MatchCard', () => {
     expect(screen.getByText('Los Cracks')).toBeInTheDocument()
     expect(screen.getByText(/Los Pachangueros/)).toBeInTheDocument()
     expect(screen.getByText('Polideportivo Roco')).toBeInTheDocument()
-    expect(screen.getByText(/en /)).toBeInTheDocument()
+    expect(screen.getByText(/en 3 días/)).toBeInTheDocument()
+  })
+
+  it('counts back instead once the match has been played', () => {
+    vi.setSystemTime(new Date('2026-08-04T18:00:00.000Z'))
+    renderWithProviders(<MatchCard match={buildMatch()} />)
+    vi.setSystemTime(new Date('2026-07-29T18:00:00.000Z'))
+
+    expect(screen.getByText(/hace 3 días/)).toBeInTheDocument()
   })
 
   it('links to the match', () => {
