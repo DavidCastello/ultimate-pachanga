@@ -14,21 +14,22 @@ even though the interface shows one.
 as football cards, create matches and pick squads, score them by CSV, and read
 the statistics — with league settings and member management for administrators.
 
-| Stage | Scope                                                | State   |
-| ----- | ---------------------------------------------------- | ------- |
-| 0     | Vite + React + shadcn/ui scaffold, linting, CI       | ✅ Done |
-| 1     | Database schema, RLS, scoring functions, views, seed | ✅ Done |
-| 2     | Auth, routing, players and player cards              | ✅ Done |
-| 3     | Matches and CSV results import                       | ✅ Done |
-| 4     | Rankings, dashboard, admin settings, members         | ✅ Done |
-| 5     | Accounts linked to players, join flow, own profile   | ✅ Done |
-| 6     | Goals, victories, sum-based scores, relative ratings | ✅ Done |
-| 7     | Statistics: podiums, palmarés, evolution and radar   | ✅ Done |
-| 8     | Scores editable per player from the match page       | ✅ Done |
-| 9     | Self-service convocatorias and team balancing        | ✅ Done |
-| 10    | Matches from five to eight a side                    | ✅ Done |
+| Stage | Scope                                                  | State   |
+| ----- | ------------------------------------------------------ | ------- |
+| 0     | Vite + React + shadcn/ui scaffold, linting, CI         | ✅ Done |
+| 1     | Database schema, RLS, scoring functions, views, seed   | ✅ Done |
+| 2     | Auth, routing, players and player cards                | ✅ Done |
+| 3     | Matches and CSV results import                         | ✅ Done |
+| 4     | Rankings, dashboard, admin settings, members           | ✅ Done |
+| 5     | Accounts linked to players, join flow, own profile     | ✅ Done |
+| 6     | Goals, victories, sum-based scores, relative ratings   | ✅ Done |
+| 7     | Statistics: podiums, palmarés, evolution and radar     | ✅ Done |
+| 8     | Scores editable per player from the match page         | ✅ Done |
+| 9     | Self-service convocatorias and team balancing          | ✅ Done |
+| 10    | Matches from five to eight a side                      | ✅ Done |
+| 11    | Guest players, estimated values, team value on a match | ✅ Done |
 
-Tests: 481 frontend (Vitest), 187 database (pgTAP). Stages 0–4 were verified in
+Tests: 494 frontend (Vitest), 211 database (pgTAP). Stages 0–4 were verified in
 Chrome at both desktop and 375 px: every page renders, nothing scrolls
 horizontally, and a real pointer drag rearranges a line-up and persists it.
 Stages 5, 6 and 9 — joining, the profile page, the reworked scoring, and signing
@@ -157,7 +158,8 @@ prefer it.
 | `make prod-roster`   | Load the real roster into the deployed database        |
 | `make prod-fixtures` | Load the real matches and squads                       |
 | `make prod-results`  | Import the real match results                          |
-| `make prod-load`     | All three, in order                                    |
+| `make prod-guests`   | Flag the players who are guests, not league members    |
+| `make prod-load`     | All four, in order                                     |
 | `make prod-dry-run`  | Rehearse the production load against the local stack   |
 
 Re-run `make db-types` after any schema change.
@@ -255,7 +257,7 @@ Where each formula lives, because three of them are easy to lose:
 | Formula       | Source of truth                                                     |
 | ------------- | ------------------------------------------------------------------- |
 | `final_score` | `import_match_scores`, migration 009 — computed once and **stored** |
-| Market value  | view `player_market_values`, migration 009 — derived on every read  |
+| Market value  | view `player_market_values`, migration 016 — derived on every read  |
 | Card rating   | `to_card_rating` + the same view — derived on every read            |
 
 `src/lib/scoring.ts` mirrors two of those. The final score, so the upload
@@ -434,11 +436,33 @@ approximation, and covered against a brute-force reference in
 
 The values themselves are the database's: `player_cards.market_value_gbp` from
 `public.player_market_values`. A debutant is not worth zero there — the view
-falls back to the league's average — so a new player is balanced as an average
-one rather than as dead weight.
+falls back to the administrator's estimate if there is one, and to the league's
+average otherwise — so a new player is balanced as themselves, or as an average
+one, rather than as dead weight.
 
 The button is **visible to everyone and enabled only for administrators**, with a
 tooltip saying so. Hiding it would just produce the question in the group chat.
+
+### Auditing the split
+
+The match page prints what each side on the pitch is worth under its name, and
+the gap between them above the two pitches. It updates as you drag, so an
+arrangement can be checked without pressing anything.
+
+Two ways it deliberately differs from the button above:
+
+- **The bench is not in it.** The display sums who is on the pitch, because that
+  is what is being looked at; the balancer counts the whole convocatoria. On an
+  odd squad the two can disagree, and neither is wrong.
+- **It is frozen once the match is scored.** `match_players.market_value_gbp`
+  records what each player was worth going _into_ the match, written by a
+  trigger before the first score lands (migration 017). Recomputing later would
+  be meaningless — importing the results is what moved those values. A match
+  still to be played shows current figures instead, and the caption says which
+  of the two is on screen.
+
+The four fixtures scored before that column existed have no frozen values and
+were not backfilled; they fall back to current figures.
 
 ## Accounts and players
 
@@ -457,6 +481,23 @@ join screen offers them in this order:
    reachable from a link otherwise. Nobody who was simply forgotten when the
    roster was typed up ends up locked out.
 
+### Two things only an administrator says about a player
+
+Both live on the player form in **Administración › Jugadores**, and neither is
+offered to a member editing their own card — `update_own_player_profile` has
+nowhere to put them, so a control that always failed would be worse than none.
+
+- **Jugador invitado.** Somebody who plays but is not in the league. Convocated,
+  scored, valued and balanced exactly like anybody else, and left out of **Liga**
+  and **Estadísticas** — a table ranking a one-off ringer against a regular
+  describes neither of them. Their scores still count towards the league mean
+  and spread every card rating is measured against: they played the match.
+- **Aproximación de valor de mercado.** What a new signing is reckoned to be
+  worth, in pounds. Used as their market value only while they have no scored
+  matches; the first real result takes over and the estimate is kept as a record
+  of what was thought. It exists because **Equilibrar equipos** splits by market
+  value, and the first split is the one with no history to go on.
+
 The **owner's email address is the administrator** — `dcastellotejera@gmail.com`,
 in `app.owner_email()`. That account is an administrator from its first
 sign-in and still picks which player it is, like everyone else. Every other
@@ -470,6 +511,7 @@ account joins as a member. Nothing depends on who registers first any more.
 | Sign themselves up for an unplayed match  |   ✅   |  ✅   |
 | Arrange an unplayed line-up               |   ✅   |  ✅   |
 | Create, edit and deactivate any player    |   —    |  ✅   |
+| Mark a player a guest, or price a new one |   —    |  ✅   |
 | Upload any player's photograph            |   —    |  ✅   |
 | Create and edit matches                   |   —    |  ✅   |
 | Call up or remove anybody                 |   —    |  ✅   |
@@ -503,7 +545,7 @@ frontend (`npm run build` → `dist`), live at
 2. ✅ `npx supabase db push`. Never `db reset --linked` — it destroys the remote
    schema.
 3. ✅ Owner account registered; `app.owner_email()` made it the administrator.
-4. ✅ Roster, fixtures and results loaded with `make prod-load`.
+4. ✅ Roster, fixtures, results and guests loaded with `make prod-load`.
 5. ✅ Cloudflare Workers pointed at this repository — see below.
 6. ⬜ Set the Site URL and redirect URLs to the Workers domain. Confirmation links
    are built from the Site URL, so this has to happen before anyone registers.
@@ -588,15 +630,15 @@ npx wrangler deploy --dry-run     # needs Node 22; `nvm use` first
 ### Loading the real league
 
 `supabase/production/` holds the league's 22 players, its four played matches
-and all 59 individual scores, transcribed from the spreadsheet. Three scripts,
-run in order, all re-runnable:
+and all 59 individual scores, transcribed from the spreadsheet, plus which of
+them are guests. Four scripts, run in order, all re-runnable:
 
 ```bash
 export PROD_DB_URL='postgresql://postgres.<ref>:<password>@...pooler.supabase.com:5432/postgres'
 make prod-load
 ```
 
-No separate rehearsal is needed: `make db-reset` already runs these three, so a
+No separate rehearsal is needed: `make db-reset` already runs these four, so a
 script that would fail against production fails locally and in CI first.
 `make prod-dry-run` runs them a second time on top of the seeded database, which
 is how you check that a re-run corrects rather than duplicates.

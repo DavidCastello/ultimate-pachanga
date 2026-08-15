@@ -200,6 +200,31 @@ posición para que su carta no valga cero, y por eso los rankings excluyen a
 quien no ha jugado: si no, media liga aparecería empatada en un valor inventado.
 Si nadie ha jugado todavía, el valor es 0.
 
+### La aproximación del administrador
+
+Al crear o editar un jugador, un administrador puede indicar una **aproximación
+de valor de mercado**. Sustituye a esa media mientras el jugador no tenga
+partidos, y a nada más:
+
+```text
+sin partidos  →  aproximación, si la hay; si no, la media de la liga
+1 partido o más  →  la fórmula de arriba, sin cambios
+```
+
+Sirve para una cosa concreta: **Equilibrar equipos** reparte por valor de
+mercado, así que un fichaje al que se le presupone nivel deja de contar como
+uno del montón desde el primer partido, que es justo cuando el reparto no tiene
+otro dato en el que apoyarse.
+
+La cifra se escribe en libras y se guarda en libras, pero se lee como
+puntuación: la vista la divide entre `market_constant_gbp` para que la ponderada
+y el valor sigan diciendo lo mismo. Y no se borra cuando deja de usarse — queda
+en la ficha como registro de lo que se pensó.
+
+La aproximación **no da valoración de carta**. Esa es una posición dentro de la
+liga y hace falta haber jugado para tenerla, así que un jugador sin partidos
+sigue en 70 valga lo que valga.
+
 El valor se muestra abreviado (`£96 M`, `£750 K`) en listas y cartas, y exacto en
 la ficha del jugador.
 
@@ -263,6 +288,31 @@ y el reparto que **minimiza esa diferencia**, con dos restricciones:
   impar, el jugador de más va al local);
 - cuenta **toda** la convocatoria, banquillo incluido: un equipo son sus
   titulares y sus suplentes, y quien entra en el minuto 20 también juega.
+
+### El valor que se ve en la página del partido
+
+Bajo el nombre de cada equipo, la página del partido muestra lo que vale ese
+equipo, y encima de los dos campos la diferencia entre ambos. Sirve para
+auditar el reparto: se ve si el botón lo dejó igualado y si alguien lo
+desigualó después arrastrando a un jugador.
+
+Dos avisos, porque **esa cifra no es la que el botón minimiza**:
+
+- **El banquillo no cuenta.** La cifra suma solo a quien está sobre el campo,
+  porque es lo que se está mirando. El botón, en cambio, reparte contando toda
+  la convocatoria (arriba). En una convocatoria impar los dos números pueden no
+  coincidir: el reparto está equilibrado según su propia definición y la
+  pantalla enseña otra.
+- **Se congela al puntuar.** Ver hoy un partido de hace un mes con los valores
+  de hoy no dice nada: ese mismo partido es lo que los movió. Así que la primera
+  vez que se importa un resultado, el valor que cada convocado traía **antes**
+  del partido se guarda en su fila de la convocatoria y ya no se mueve, ni
+  aunque se corrija el acta. Un partido por jugar enseña valores actuales. El
+  pie de la tarjeta dice cuál de las dos cosas está mostrando.
+
+Los cuatro partidos que ya estaban jugados cuando apareció la columna no tienen
+valor congelado y nunca lo tendrán: los de hoy no son los de entonces, y
+rellenarlos sería inventárselo. Esos se muestran con valores actuales.
 
 ### Por qué el valor de mercado y no la valoración
 
@@ -382,7 +432,7 @@ contar como cero.
 | -------------------------------- | --------------------------------------------------------------- |
 | Palmarés / atributos de la carta | cuántas veces ha recibido cada atributo, en partidos puntuados  |
 | % de victorias                   | `victorias / partidos jugados`, siempre acompañado del recuento |
-| Valor total (portada)            | suma del valor de mercado de los jugadores activos              |
+| Valor total (portada)            | suma del valor de mercado de los activos, sin invitados         |
 | Partidos puntuados (portada)     | partidos con estado `scored`                                    |
 
 El porcentaje de victorias nunca va solo: un 100 % de un partido no es lo mismo
@@ -391,9 +441,23 @@ lado.
 
 ## 9. La pantalla de Estadísticas
 
-Solo entran jugadores **activos y con al menos un partido puntuado**. Incluir al
-resto sería listar sobre un valor de relleno compartido, que parece una
-clasificación y no lo es.
+Solo entran jugadores **activos, no invitados y con al menos un partido
+puntuado**. Incluir a quien no ha jugado sería listar sobre un valor de relleno
+compartido, que parece una clasificación y no lo es.
+
+### Los jugadores invitados
+
+Un invitado es alguien que juega pero no es de la liga: el que se apunta un día
+porque falta gente. Se le convoca, se le puntúa y se le valora igual que a
+cualquiera — cuenta para el valor de su equipo y para equilibrar el reparto —
+pero **no aparece ni en Liga ni en Estadísticas**, porque una clasificación que
+mide a quien vino una vez contra quien viene cada semana no describe bien a
+ninguno de los dos.
+
+Lo que **sí** sigue haciendo es contar para la media y la desviación de la liga,
+es decir, para la valoración 0-99 de todos los demás. Jugó el partido, y sacarlo
+de ahí reescribiría la tarde de los demás. Se marca desde **Administración ›
+Jugadores**, en la ficha del jugador.
 
 ### General
 
