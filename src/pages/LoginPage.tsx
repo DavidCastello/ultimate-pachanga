@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, useLocation } from 'react-router'
+import { Link, Navigate, useLocation } from 'react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -100,6 +100,14 @@ function CredentialsForm({ mode, onSubmitted }: CredentialsFormProps) {
         ) : null}
         {mode === 'signin' ? 'Entrar' : 'Crear cuenta'}
       </Button>
+      {mode === 'signin' ? (
+        <Link
+          to="/forgot-password"
+          className="text-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          ¿Has olvidado tu contraseña?
+        </Link>
+      ) : null}
     </form>
   )
 }
