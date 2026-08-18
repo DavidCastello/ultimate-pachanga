@@ -11,8 +11,10 @@ import { matchRoutes } from 'react-router'
  */
 const ROUTES = [
   { path: '/login' },
+  { path: '/forgot-password' },
   {
     children: [
+      { path: '/reset-password' },
       {
         children: [
           { path: '/league' },
@@ -51,5 +53,10 @@ describe('route ranking', () => {
 
   it('routes a player id to the player detail page', () => {
     expect(matchedPath('/players/abc')).toBe('/players/:playerId')
+  })
+
+  it('routes both password recovery pages', () => {
+    expect(matchedPath('/forgot-password')).toBe('/forgot-password')
+    expect(matchedPath('/reset-password')).toBe('/reset-password')
   })
 })

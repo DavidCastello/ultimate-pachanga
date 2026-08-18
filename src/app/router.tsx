@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react'
 import { AppLayout } from '@/app/AppLayout'
 import { AdminRoute, LeagueMemberRoute, ProtectedRoute } from '@/app/guards'
 import { LoginPage } from '@/pages/LoginPage'
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
 /**
@@ -16,6 +17,11 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
 const OnboardingPage = lazy(() =>
   import('@/pages/OnboardingPage').then((module) => ({
     default: module.OnboardingPage,
+  })),
+)
+const ResetPasswordPage = lazy(() =>
+  import('@/pages/ResetPasswordPage').then((module) => ({
+    default: module.ResetPasswordPage,
   })),
 )
 const LeaguePage = lazy(() =>
@@ -94,6 +100,7 @@ function RouteFallback() {
  */
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage /> },
   {
     element: <ProtectedRoute />,
     children: [
@@ -101,6 +108,7 @@ const router = createBrowserRouter([
       // with neither a league nor a player is sent, and the shell has nothing
       // to render for one.
       { path: '/onboarding', element: <OnboardingPage /> },
+      { path: '/reset-password', element: <ResetPasswordPage /> },
       {
         element: <LeagueMemberRoute />,
         children: [
