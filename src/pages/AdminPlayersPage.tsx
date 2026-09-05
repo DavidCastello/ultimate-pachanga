@@ -133,7 +133,7 @@ export function AdminPlayersPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Gestión de jugadores</h1>
+          <h1 className="page-title">Gestión de jugadores</h1>
           <p className="text-sm text-muted-foreground">
             Los jugadores con historial se desactivan, nunca se eliminan.
           </p>

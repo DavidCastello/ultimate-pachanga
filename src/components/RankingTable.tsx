@@ -38,7 +38,7 @@ export function RankingTable({
   renderContext,
 }: RankingTableProps) {
   return (
-    <div className="overflow-x-auto rounded-xl border">
+    <div className="competition-ranking overflow-x-auto rounded-sm border border-border bg-card">
       <Table>
         <TableHeader>
           <TableRow>
@@ -56,7 +56,7 @@ export function RankingTable({
             const avatarUrl = getAvatarUrl(player.avatarPath)
 
             return (
-              <TableRow key={player.id}>
+              <TableRow key={player.id} className="group hover:bg-primary/10">
                 <TableCell
                   className={cn(
                     'numeric text-right font-bold',
@@ -68,9 +68,9 @@ export function RankingTable({
                 <TableCell>
                   <Link
                     to={`/players/${player.id}`}
-                    className="flex min-w-0 items-center gap-2 hover:underline"
+                    className="flex min-w-0 items-center gap-3 border-l-2 border-transparent py-1 transition-colors group-hover:border-primary"
                   >
-                    <Avatar className="size-7 shrink-0">
+                    <Avatar className="size-10 shrink-0 border border-primary/55 shadow-[0_0_16px_rgb(234_175_53/0.18)] transition-transform group-hover:scale-105">
                       {avatarUrl ? (
                         <AvatarImage
                           src={avatarUrl}
@@ -87,7 +87,7 @@ export function RankingTable({
                         )}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="truncate font-medium">
+                    <span className="truncate text-base font-medium">
                       {player.displayName}
                     </span>
                   </Link>

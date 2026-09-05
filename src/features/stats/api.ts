@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { publicSnapshotForAnonymous } from '@/features/public/api'
 
 export const statsKeys = {
   timeline: (leagueId: string) => ['stats', 'timeline', leagueId] as const,
@@ -36,6 +37,34 @@ export interface ScoreTimeline {
 export async function fetchScoreTimeline(
   leagueId: string,
 ): Promise<ScoreTimeline> {
+  const publicSnapshot = await publicSnapshotForAnonymous()
+  if (publicSnapshot) {
+    const matches = publicSnapshot.matches
+      .filter(
+        (match) => match.league_id === leagueId && match.status === 'scored',
+      )
+      .sort(
+        (left, right) =>
+          new Date(left.played_at).getTime() - new Date(right.played_at).getTime(),
+      )
+      .map((match) => ({
+        id: match.id,
+        title: match.title,
+        playedAt: match.played_at,
+      }))
+    const matchIds = new Set(matches.map((match) => match.id))
+    const scores = publicSnapshot.scores
+      .filter((score) => matchIds.has(score.match_id))
+      .map((score) => ({
+        matchId: score.match_id,
+        playerId: score.player_id,
+        finalScore: score.final_score,
+        metricScores: score.metric_scores,
+      }))
+
+    return { matches, scores }
+  }
+
   const { data, error } = await supabase
     .from('player_match_scores')
     .select(

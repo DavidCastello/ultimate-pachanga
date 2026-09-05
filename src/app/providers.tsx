@@ -7,7 +7,6 @@ import { toast } from 'sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/features/auth/AuthProvider'
-import { toErrorDetail } from '@/lib/errors'
 
 /**
  * Every read failure, surfaced once.
@@ -25,9 +24,11 @@ import { toErrorDetail } from '@/lib/errors'
 const queryCache = new QueryCache({
   onError: (error, query) => {
     console.error('Query failed', query.queryKey, error)
-    toast.error('No se pudieron cargar los datos', {
-      description: toErrorDetail(error),
-    })
+    if (query.state.data !== undefined) {
+      toast.error('No se pudieron actualizar los datos', {
+        description: 'Mostramos la última información disponible.',
+      })
+    }
   },
 })
 
@@ -40,9 +41,9 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
-      // The data is a friends' league, not a trading floor; refetching on every
-      // window focus is noise.
-      refetchOnWindowFocus: false,
+      // A match can change while somebody has the site open. Returning to the
+      // tab should refresh the league without forcing a manual reload.
+      refetchOnWindowFocus: true,
       retry: 1,
     },
   },

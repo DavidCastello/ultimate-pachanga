@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/features/auth/useAuth'
+import {
+  fetchPublicLeagueSnapshot,
+  publicKeys,
+} from '@/features/public/api'
 import type {
   LeagueAttributeRow,
   LeagueMetricRow,
@@ -64,8 +68,9 @@ export function useIsAdmin(): boolean {
 
 export function useLeague() {
   const { data: membership } = useMembership()
+  const { user, isLoading: isAuthLoading } = useAuth()
 
-  return useQuery({
+  const memberQuery = useQuery({
     queryKey: [...leagueKeys.league, membership?.leagueId],
     enabled: Boolean(membership),
     queryFn: async (): Promise<LeagueRow> => {
@@ -79,12 +84,28 @@ export function useLeague() {
       return data
     },
   })
+
+  const publicQuery = useQuery({
+    queryKey: publicKeys.snapshot,
+    enabled: !isAuthLoading && !user,
+    queryFn: fetchPublicLeagueSnapshot,
+    refetchInterval: 60_000,
+  })
+
+  return user
+    ? memberQuery
+    : {
+        ...publicQuery,
+        data: publicQuery.data?.league ?? undefined,
+        isPending: isAuthLoading || publicQuery.isPending,
+      }
 }
 
 export function useLeagueMetrics() {
   const { data: membership } = useMembership()
+  const { user, isLoading: isAuthLoading } = useAuth()
 
-  return useQuery({
+  const memberQuery = useQuery({
     queryKey: [...leagueKeys.metrics, membership?.leagueId],
     enabled: Boolean(membership),
     queryFn: async (): Promise<LeagueMetricRow[]> => {
@@ -99,12 +120,28 @@ export function useLeagueMetrics() {
       return data
     },
   })
+
+  const publicQuery = useQuery({
+    queryKey: publicKeys.snapshot,
+    enabled: !isAuthLoading && !user,
+    queryFn: fetchPublicLeagueSnapshot,
+    refetchInterval: 60_000,
+  })
+
+  return user
+    ? memberQuery
+    : {
+        ...publicQuery,
+        data: publicQuery.data?.metrics,
+        isPending: isAuthLoading || publicQuery.isPending,
+      }
 }
 
 export function useLeagueAttributes() {
   const { data: membership } = useMembership()
+  const { user, isLoading: isAuthLoading } = useAuth()
 
-  return useQuery({
+  const memberQuery = useQuery({
     queryKey: [...leagueKeys.attributes, membership?.leagueId],
     enabled: Boolean(membership),
     queryFn: async (): Promise<LeagueAttributeRow[]> => {
@@ -120,4 +157,19 @@ export function useLeagueAttributes() {
       return data
     },
   })
+
+  const publicQuery = useQuery({
+    queryKey: publicKeys.snapshot,
+    enabled: !isAuthLoading && !user,
+    queryFn: fetchPublicLeagueSnapshot,
+    refetchInterval: 60_000,
+  })
+
+  return user
+    ? memberQuery
+    : {
+        ...publicQuery,
+        data: publicQuery.data?.attributes,
+        isPending: isAuthLoading || publicQuery.isPending,
+      }
 }

@@ -13,8 +13,8 @@ import { fetchPlayerCards, playerKeys } from '@/features/players/api'
 import { EvolutionSection } from '@/features/stats/EvolutionSection'
 import {
   useLeagueAttributes,
+  useLeague,
   useLeagueMetrics,
-  useMembership,
 } from '@/features/league/useLeague'
 import type { LeagueMetricRow, PlayerCardData } from '@/types/domain'
 
@@ -46,12 +46,12 @@ function PodiumCard({
   children: React.ReactNode
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
+    <Card className="motion-card overflow-hidden border-border bg-[linear-gradient(145deg,#181818_0%,#0d0d0d_100%)] transition-transform hover:-translate-y-0.5">
+      <CardHeader className="border-b border-border/80">
+        <CardTitle className="card-title">
           <h2>{title}</h2>
         </CardTitle>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="body-copy text-muted-foreground">{description}</p>
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
@@ -84,9 +84,9 @@ function GeneralTab({
   )
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="stats-grid">
       <PodiumCard
-        title="Jugadores más valorados"
+        title="Valor de mercado"
         description="Valor de mercado calculado a partir de las puntuaciones"
       >
         <PodiumList
@@ -99,7 +99,7 @@ function GeneralTab({
       </PodiumCard>
 
       <PodiumCard
-        title="Jugadores más goleadores"
+        title="Goleadores"
         description="Goles marcados en partidos puntuados"
       >
         <PodiumList
@@ -110,8 +110,8 @@ function GeneralTab({
       </PodiumCard>
 
       <PodiumCard
-        title="Mejor estado de forma actual"
-        description="Valoración 45-99, ponderada entre histórico y último partido"
+        title="Estado de forma"
+        description="Quién llega más fuerte a la próxima jornada"
       >
         <PodiumList
           players={topBy(players, (player) => player.cardRating)}
@@ -122,7 +122,7 @@ function GeneralTab({
 
       {defensiveMetric ? (
         <PodiumCard
-          title="Top jugadores defensivos"
+          title="Defensa"
           description={`Media de ${defensiveMetric.label} en la escala 0-99`}
         >
           <PodiumList
@@ -142,7 +142,7 @@ function GeneralTab({
 }
 
 export function StatsPage() {
-  const { data: membership } = useMembership()
+  const { data: league } = useLeague()
   const { data: metrics = [] } = useLeagueMetrics()
   const { data: attributes = [] } = useLeagueAttributes()
   const [tab, setTab] = useState('general')
@@ -153,9 +153,9 @@ export function StatsPage() {
     error,
     refetch,
   } = useQuery({
-    queryKey: playerKeys.cards(membership?.leagueId ?? ''),
-    enabled: Boolean(membership),
-    queryFn: () => fetchPlayerCards(membership!.leagueId),
+    queryKey: playerKeys.cards(league?.id ?? ''),
+    enabled: Boolean(league),
+    queryFn: () => fetchPlayerCards(league!.id),
   })
 
   // Guests are left out of every tab, the evolution chart included: `ranked` is
@@ -192,7 +192,7 @@ export function StatsPage() {
   if (error) {
     return (
       <div className="flex flex-col gap-5">
-        <h1 className="text-2xl font-bold">Estadísticas</h1>
+        <h1 className="page-title">Estadísticas</h1>
         <ErrorState error={error} onRetry={() => void refetch()} />
       </div>
     )
@@ -201,7 +201,7 @@ export function StatsPage() {
   if (ranked.length === 0) {
     return (
       <div className="flex flex-col gap-5">
-        <h1 className="text-2xl font-bold">Estadísticas</h1>
+        <h1 className="page-title">Estadísticas</h1>
         <EmptyState
           icon={Trophy}
           title="Todavía no hay partidos puntuados"
@@ -212,34 +212,50 @@ export function StatsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-9">
       <div>
-        <h1 className="text-2xl font-bold">Estadísticas</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="page-title">Estadísticas</h1>
+        <p className="mt-3 text-lg text-muted-foreground">
           {ranked.length} jugadores con partidos puntuados
         </p>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        {/* Scrolls sideways on a phone rather than wrapping into a tall block. */}
-        <TabsList className="flex w-full justify-start overflow-x-auto">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="palmares">Palmarés</TabsTrigger>
-          <TabsTrigger value="evolution">Evolución</TabsTrigger>
+        <TabsList className="grid h-auto min-h-15 w-full grid-cols-3 gap-1 overflow-visible p-1">
+          <TabsTrigger
+            value="general"
+            className="h-auto min-h-14 px-2 py-1 font-heading text-lg leading-none font-semibold uppercase sm:text-xl"
+          >
+            General
+          </TabsTrigger>
+          <TabsTrigger
+            value="palmares"
+            className="h-auto min-h-14 px-2 py-1 font-heading text-lg leading-none font-semibold uppercase sm:text-xl"
+          >
+            Palmarés
+          </TabsTrigger>
+          <TabsTrigger
+            value="evolution"
+            className="h-auto min-h-14 px-2 py-1 font-heading text-lg leading-none font-semibold uppercase sm:text-xl"
+          >
+            Evolución
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general" className="mt-4">
+        <TabsContent value="general" className="mt-6">
           <GeneralTab players={ranked} metrics={metrics} />
         </TabsContent>
 
-        <TabsContent value="palmares" className="mt-4">
-          <div className="flex flex-col gap-6">
+        <TabsContent value="palmares" className="mt-6">
+          <div className="stats-grid">
             {attributes.map((attribute) => {
               const holders = byAttribute(attribute.code)
 
               return (
                 <section key={attribute.code} className="flex flex-col gap-2">
-                  <h2 className="text-sm font-semibold">{attribute.label}</h2>
+                  <h2 className="font-heading text-3xl leading-none font-semibold uppercase">
+                    {attribute.label}
+                  </h2>
                   {holders.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       Nadie lo ha recibido todavía.
@@ -259,10 +275,10 @@ export function StatsPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="evolution" className="mt-4">
-          {membership ? (
+        <TabsContent value="evolution" className="mt-6">
+          {league ? (
             <EvolutionSection
-              leagueId={membership.leagueId}
+              leagueId={league.id}
               players={ranked}
               metrics={metrics}
             />

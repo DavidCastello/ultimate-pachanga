@@ -27,6 +27,8 @@ export function ErrorState({
   onRetry,
   className,
 }: ErrorStateProps) {
+  const detail = toErrorDetail(error)
+
   return (
     <div
       role="alert"
@@ -37,10 +39,21 @@ export function ErrorState({
     >
       <AlertTriangle className="size-8 text-destructive" aria-hidden="true" />
       <div className="space-y-1">
-        <p className="font-semibold">{title}</p>
-        <p className="max-w-prose font-mono text-xs break-words text-muted-foreground">
-          {toErrorDetail(error)}
+        <p className="font-heading text-2xl leading-none font-semibold uppercase">
+          {title}
         </p>
+        <p className="body-copy max-w-prose text-muted-foreground">
+          La conexión no ha respondido como esperábamos. Puedes intentarlo de
+          nuevo sin perder nada.
+        </p>
+        <details className="mt-3 max-w-prose text-left">
+          <summary className="cursor-pointer text-xs text-muted-foreground">
+            Ver detalles técnicos
+          </summary>
+          <p className="mt-2 font-mono text-xs break-words text-muted-foreground">
+            {detail}
+          </p>
+        </details>
       </div>
       {onRetry ? (
         <Button variant="outline" size="sm" onClick={onRetry}>

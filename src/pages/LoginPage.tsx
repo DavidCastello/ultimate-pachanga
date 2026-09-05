@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation } from 'react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,11 +18,12 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { signIn, signUp } from '@/features/auth/api'
 import { useAuth } from '@/features/auth/useAuth'
-import { APP_NAME } from '@/lib/env'
+import { BRAND_NAME, BRAND_TAGLINE, LOGO_URL } from '@/lib/brand'
 
 const credentialsSchema = z.object({
   email: z.string().min(1, 'Introduce tu correo').email('Correo no válido'),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+  confirmPassword: z.string().optional(),
 })
 
 type CredentialsValues = z.infer<typeof credentialsSchema>
@@ -35,16 +36,23 @@ interface CredentialsFormProps {
 }
 
 function CredentialsForm({ mode, onSubmitted }: CredentialsFormProps) {
+  const [showPassword, setShowPassword] = useState(false)
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<CredentialsValues>({
     resolver: zodResolver(credentialsSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: '', password: '', confirmPassword: '' },
   })
 
   async function onSubmit(values: CredentialsValues) {
+    if (mode === 'signup' && values.password !== values.confirmPassword) {
+      setError('confirmPassword', { message: 'Las contraseñas no coinciden' })
+      return
+    }
+
     try {
       if (mode === 'signin') {
         await signIn(values)
@@ -82,17 +90,52 @@ function CredentialsForm({ mode, onSubmitted }: CredentialsFormProps) {
 
       <Field data-invalid={Boolean(errors.password) || undefined}>
         <FieldLabel htmlFor={`${mode}-password`}>Contraseña</FieldLabel>
-        <Input
-          id={`${mode}-password`}
-          type="password"
-          autoComplete={passwordAutoComplete}
-          aria-invalid={Boolean(errors.password)}
-          {...register('password')}
-        />
+        <div className="relative">
+          <Input
+            id={`${mode}-password`}
+            type={showPassword ? 'text' : 'password'}
+            autoComplete={passwordAutoComplete}
+            aria-invalid={Boolean(errors.password)}
+            className="pr-11"
+            {...register('password')}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            className="absolute top-1/2 right-1 -translate-y-1/2 text-muted-foreground"
+            onClick={() => setShowPassword((visible) => !visible)}
+          >
+            {showPassword ? (
+              <EyeOff className="size-4" aria-hidden="true" />
+            ) : (
+              <Eye className="size-4" aria-hidden="true" />
+            )}
+          </Button>
+        </div>
         {errors.password ? (
           <FieldError>{errors.password.message}</FieldError>
         ) : null}
       </Field>
+
+      {mode === 'signup' ? (
+        <Field data-invalid={Boolean(errors.confirmPassword) || undefined}>
+          <FieldLabel htmlFor="signup-confirm-password">
+            Confirmar contraseña
+          </FieldLabel>
+          <Input
+            id="signup-confirm-password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            aria-invalid={Boolean(errors.confirmPassword)}
+            {...register('confirmPassword')}
+          />
+          {errors.confirmPassword ? (
+            <FieldError>{errors.confirmPassword.message}</FieldError>
+          ) : null}
+        </Field>
+      ) : null}
 
       <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? (
@@ -123,13 +166,32 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-svh items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-xl">
-            <h1>{APP_NAME}</h1>
-          </CardTitle>
-          <CardDescription>Liga de verano roco · Fútbol 7</CardDescription>
+    <main className="flex min-h-svh items-center justify-center p-4 sm:p-6">
+      <Card className="relative w-full max-w-lg border-primary/30 shadow-[0_24px_64px_rgb(0_0_0/0.6)]">
+        <Button
+          asChild
+          variant="ghost"
+          size="icon"
+          className="absolute top-3 right-3 z-10 border border-border/70 bg-black/45 text-muted-foreground hover:border-primary/60 hover:text-primary"
+        >
+          <Link to="/league" aria-label="Cerrar y ver la liga como espectador">
+            <X className="size-5" aria-hidden="true" />
+          </Link>
+        </Button>
+        <CardHeader className="flex flex-col items-center border-b border-border pb-6 text-center">
+          <div className="flex flex-col items-center">
+            <img
+              src={LOGO_URL}
+              alt="Ultimate Pachangas"
+              className="h-32 w-32 object-contain"
+            />
+            <CardTitle className="mt-2 text-5xl leading-none uppercase">
+              <h1>{BRAND_NAME}</h1>
+            </CardTitle>
+          </div>
+          <CardDescription className="technical text-[0.625rem] uppercase">
+            {BRAND_TAGLINE}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={mode} onValueChange={(value) => setMode(value as Mode)}>

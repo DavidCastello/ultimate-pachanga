@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Tooltip,
   TooltipContent,
@@ -67,6 +68,7 @@ import { fetchPlayerCards, playerKeys } from '@/features/players/api'
 import { useMyPlayerId } from '@/features/players/useMyPlayer'
 import {
   useIsAdmin,
+  useLeague,
   useLeagueAttributes,
   useLeagueMetrics,
   useMembership,
@@ -129,6 +131,7 @@ export function MatchDetailPage() {
   const queryClient = useQueryClient()
   const isAdmin = useIsAdmin()
   const { data: membership } = useMembership()
+  const { data: league } = useLeague()
   const { data: myPlayerId } = useMyPlayerId()
   const { data: metrics = [] } = useLeagueMetrics()
   const { data: attributes = [] } = useLeagueAttributes()
@@ -165,9 +168,9 @@ export function MatchDetailPage() {
   // Needed by every viewer now, not just administrators: the pitch renders
   // player cards, which come from this view rather than from the squad query.
   const { data: players = [] } = useQuery({
-    queryKey: playerKeys.cards(membership?.leagueId ?? ''),
-    enabled: Boolean(membership),
-    queryFn: () => fetchPlayerCards(membership!.leagueId),
+    queryKey: playerKeys.cards(league?.id ?? ''),
+    enabled: Boolean(league),
+    queryFn: () => fetchPlayerCards(league!.id),
   })
 
   /**
@@ -248,7 +251,7 @@ export function MatchDetailPage() {
    * every one of these; this only decides what is worth rendering.
    */
   const isUpcoming = isUpcomingMatch(match?.status)
-  const canArrangeLineup = isAdmin || isUpcoming
+  const canArrangeLineup = Boolean(membership) && (isAdmin || isUpcoming)
   const canManageSquad = isAdmin && isUpcoming
   const isAlreadyCalledUp = squad.some(
     (member) => member.playerId === myPlayerId,
@@ -548,7 +551,7 @@ export function MatchDetailPage() {
 
       <MatchHero match={match} />
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 empty:hidden">
         {canJoin ? (
           <Button onClick={() => join.mutate()} disabled={join.isPending}>
             <UserPlus className="size-4" aria-hidden="true" />
@@ -558,24 +561,6 @@ export function MatchDetailPage() {
 
         {/* A status rather than a control: there is no self-removal, and saying
             so where the sign-up button was avoids the hunt for one. */}
-        {isUpcoming && isAlreadyCalledUp ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge
-                variant="secondary"
-                className="h-9 gap-1.5 px-3"
-                tabIndex={0}
-              >
-                <Check className="size-4" aria-hidden="true" />
-                Estás convocado
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent>
-              Solo un administrador puede quitar a alguien de la convocatoria.
-            </TooltipContent>
-          </Tooltip>
-        ) : null}
-
         <AdminOnly>
           <Button
             variant="outline"
@@ -610,8 +595,8 @@ export function MatchDetailPage() {
 
       {isEditing ? (
         <Card className="max-w-2xl">
-          <CardHeader>
-            <CardTitle>
+          <CardHeader className="border-b border-border">
+            <CardTitle className="text-4xl leading-none uppercase">
               <h2>Editar partido</h2>
             </CardTitle>
           </CardHeader>
@@ -667,9 +652,16 @@ export function MatchDetailPage() {
         </Card>
       ) : null}
 
+      <Tabs key={match.id} defaultValue={match.status === 'scored' ? 'results' : 'lineups'}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="results">Resultados</TabsTrigger>
+          <TabsTrigger value="lineups">Alineaciones</TabsTrigger>
+          <TabsTrigger value="squad">Convocados</TabsTrigger>
+        </TabsList>
+      <TabsContent value="lineups">
       <Card>
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-          <CardTitle>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 border-b border-border">
+          <CardTitle className="text-4xl leading-none uppercase">
             <h2>Alineaciones</h2>
           </CardTitle>
           {isUpcoming ? (
@@ -683,7 +675,7 @@ export function MatchDetailPage() {
         </CardHeader>
         <CardContent>
           {isSquadPending ? (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-7 lg:grid-cols-2">
               <Skeleton className="aspect-[1000/1250] rounded-xl" />
               <Skeleton className="aspect-[1000/1250] rounded-xl" />
             </div>
@@ -718,11 +710,30 @@ export function MatchDetailPage() {
         </CardContent>
       </Card>
 
+      </TabsContent>
+      <TabsContent value="squad">
       <Card>
-        <CardHeader>
-          <CardTitle>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 border-b border-border">
+          <CardTitle className="text-3xl leading-none uppercase sm:text-4xl">
             <h2>Convocados ({squad.length})</h2>
           </CardTitle>
+          {isUpcoming && isAlreadyCalledUp ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="secondary"
+                  className="h-8 gap-1.5 px-2.5"
+                  tabIndex={0}
+                >
+                  <Check className="size-4" aria-hidden="true" />
+                  Estás convocado
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                Solo un administrador puede quitar a alguien de la convocatoria.
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
         </CardHeader>
         <CardContent>
           {isSquadPending ? (
@@ -779,6 +790,8 @@ export function MatchDetailPage() {
         </CardContent>
       </Card>
 
+      </TabsContent>
+      <TabsContent value="results">
       {resultRows.length > 0 ? (
         <Card>
           <CardHeader>
@@ -793,7 +806,80 @@ export function MatchDetailPage() {
             ) : null}
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto md:hidden">
+              <Table className="min-w-[20rem] table-fixed text-xs">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-28 px-2 text-left">
+                      Jugador
+                    </TableHead>
+                    {metrics.map((metric) => (
+                      <TableHead
+                        key={metric.code}
+                        className="w-9 px-1 text-center"
+                        title={metric.label}
+                      >
+                        {metric.label.slice(0, 3)}
+                      </TableHead>
+                    ))}
+                    <TableHead className="w-11 px-1 text-right">
+                      Final
+                    </TableHead>
+                    {isAdmin ? (
+                      <TableHead className="w-9 px-1 text-right">
+                        <span className="sr-only">Acciones</span>
+                      </TableHead>
+                    ) : null}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {resultRows.map((row) => (
+                    <TableRow key={row.playerId}>
+                      <TableCell className="px-2 py-2">
+                        <Link
+                          to={`/players/${row.playerId}`}
+                          className="block truncate font-semibold hover:text-primary"
+                          title={row.displayName}
+                        >
+                          {row.displayName}
+                        </Link>
+                      </TableCell>
+                      {metrics.map((metric) => (
+                        <TableCell
+                          key={metric.code}
+                          className="numeric px-1 py-2 text-center text-muted-foreground"
+                        >
+                          {formatScore(
+                            row.score?.metricScores[metric.code] ?? null,
+                          )}
+                        </TableCell>
+                      ))}
+                      <TableCell className="numeric px-1 py-2 text-right text-base font-bold text-primary">
+                        {formatScore(row.score?.finalScore ?? null)}
+                      </TableCell>
+                      {isAdmin ? (
+                        <TableCell className="px-1 py-1 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={
+                              row.score
+                                ? `Editar puntuación de ${row.displayName}`
+                                : `Puntuar a ${row.displayName}`
+                            }
+                            data-testid={`edit-score-mobile-${row.playerCode}`}
+                            onClick={() => setScoreTarget(toScoreTarget(row))}
+                          >
+                            <Pencil className="size-4" aria-hidden="true" />
+                          </Button>
+                        </TableCell>
+                      ) : null}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -883,7 +969,11 @@ export function MatchDetailPage() {
             </div>
           </CardContent>
         </Card>
-      ) : null}
+      ) : (
+        <EmptyState title="Todavía no hay puntuaciones" description="Los resultados aparecerán aquí cuando se puntúe la jornada." />
+      )}
+      </TabsContent>
+      </Tabs>
 
       <MatchScoreDialog
         open={scoreTarget !== null}

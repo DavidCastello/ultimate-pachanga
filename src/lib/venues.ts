@@ -13,7 +13,7 @@ interface VenuePhotograph {
   readonly image: string
 }
 
-const UIB_IMAGE = '/venues/uib.webp'
+const UIB_IMAGE = `${import.meta.env.BASE_URL}venues/uib.webp`
 
 const VENUES: readonly VenuePhotograph[] = [
   { keywords: ['uib', 'universitat'], image: UIB_IMAGE },

@@ -1,5 +1,6 @@
 import { supabase, PLAYER_AVATARS_BUCKET } from '@/lib/supabase'
 import { toImageExtension } from '@/lib/images'
+import { publicSnapshotForAnonymous } from '@/features/public/api'
 import {
   toPlayerCardData,
   type PlayerCardData,
@@ -12,6 +13,83 @@ export const playerKeys = {
   card: (playerId: string) => ['players', 'card', playerId] as const,
   history: (playerId: string) => ['players', 'history', playerId] as const,
   mine: (userId: string) => ['players', 'mine', userId] as const,
+  latestAwards: (leagueId: string) =>
+    ['players', 'latest-awards', leagueId] as const,
+}
+
+export interface LatestAwardWinner {
+  attributeCode: string
+  playerId: string
+  matchId: string
+  playedAt: string
+}
+
+export async function fetchLatestAwardWinners(
+  leagueId: string,
+): Promise<LatestAwardWinner[]> {
+  const publicSnapshot = await publicSnapshotForAnonymous()
+  if (publicSnapshot) {
+    const matchesById = new Map(
+      publicSnapshot.matches.map((match) => [match.id, match]),
+    )
+    const winners = new Map<string, LatestAwardWinner>()
+
+    for (const score of publicSnapshot.scores) {
+      const match = matchesById.get(score.match_id)
+      if (!match || match.league_id !== leagueId) continue
+
+      for (const attribute of score.attributes) {
+        if (!winners.has(attribute.code)) {
+          winners.set(attribute.code, {
+            attributeCode: attribute.code,
+            playerId: score.player_id,
+            matchId: score.match_id,
+            playedAt: match.played_at,
+          })
+        }
+      }
+    }
+
+    return [...winners.values()]
+  }
+
+  const { data, error } = await supabase
+    .from('player_match_scores')
+    .select(
+      `player_id,
+       matches!inner (id, played_at, league_id, status),
+       player_match_score_attributes (
+         league_attributes (code)
+       )`,
+    )
+    .eq('matches.league_id', leagueId)
+    .eq('matches.status', 'scored')
+    .order('played_at', { ascending: false, referencedTable: 'matches' })
+
+  if (error) throw error
+
+  const winners = new Map<string, LatestAwardWinner>()
+  const newestFirst = [...data].sort(
+    (left, right) =>
+      new Date(right.matches.played_at).getTime() -
+      new Date(left.matches.played_at).getTime(),
+  )
+
+  for (const score of newestFirst) {
+    for (const link of score.player_match_score_attributes) {
+      const attribute = link.league_attributes
+      if (!attribute || winners.has(attribute.code)) continue
+
+      winners.set(attribute.code, {
+        attributeCode: attribute.code,
+        playerId: score.player_id,
+        matchId: score.matches.id,
+        playedAt: score.matches.played_at,
+      })
+    }
+  }
+
+  return [...winners.values()]
 }
 
 /**
@@ -34,6 +112,13 @@ export async function fetchMyPlayerId(userId: string): Promise<string | null> {
 export async function fetchPlayerCards(
   leagueId: string,
 ): Promise<PlayerCardData[]> {
+  const publicSnapshot = await publicSnapshotForAnonymous()
+  if (publicSnapshot) {
+    return publicSnapshot.players
+      .filter((player) => player.leagueId === leagueId)
+      .sort((left, right) => right.cardRating - left.cardRating)
+  }
+
   const { data, error } = await supabase
     .from('player_cards')
     .select('*')
@@ -50,6 +135,13 @@ export async function fetchPlayerCards(
 export async function fetchPlayerCard(
   playerId: string,
 ): Promise<PlayerCardData> {
+  const publicSnapshot = await publicSnapshotForAnonymous()
+  if (publicSnapshot) {
+    const player = publicSnapshot.players.find((entry) => entry.id === playerId)
+    if (!player) throw new Error('No se encontró el jugador')
+    return player
+  }
+
   const { data, error } = await supabase
     .from('player_cards')
     .select('*')
@@ -87,6 +179,36 @@ export interface PlayerMatchHistoryEntry {
 export async function fetchPlayerHistory(
   playerId: string,
 ): Promise<PlayerMatchHistoryEntry[]> {
+  const publicSnapshot = await publicSnapshotForAnonymous()
+  if (publicSnapshot) {
+    const matchesById = new Map(
+      publicSnapshot.matches.map((match) => [match.id, match]),
+    )
+
+    return publicSnapshot.scores
+      .filter((score) => score.player_id === playerId)
+      .map((score) => {
+        const match = matchesById.get(score.match_id)
+
+        return {
+          matchId: score.match_id,
+          matchTitle: match?.title ?? 'Jornada',
+          playedAt: match?.played_at ?? '',
+          goals: score.goals,
+          victory: Number(score.victory),
+          baseScore: score.base_score,
+          attributePoints: score.attribute_points,
+          finalScore: score.final_score,
+          metricScores: score.metric_scores,
+          attributes: score.attributes,
+        }
+      })
+      .sort(
+        (left, right) =>
+          new Date(right.playedAt).getTime() - new Date(left.playedAt).getTime(),
+      )
+  }
+
   const { data, error } = await supabase
     .from('player_match_scores')
     .select(

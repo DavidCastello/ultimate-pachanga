@@ -1,20 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
-@import '@fontsource-variable/geist';
 
 @custom-variant dark (&:is(.dark *));
 
-/* ---------------------------------------------------------------------------
-   Roco Summer League design tokens.
-
-   Dark is the default interface (<html class="dark">); the light palette is
-   kept so the app stays legible if the class is ever removed.
-   --------------------------------------------------------------------------- */
-
+/* Club archive: photographic stickers, scoreboard figures and compact panels. */
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-heading: 'Barlow Condensed', Impact, sans-serif;
+  --font-sans: 'Inter', Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,30 +44,21 @@
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-
-  /* Card tiers — selected from card_rating */
   --color-tier-gold: var(--tier-gold);
   --color-tier-gold-dim: var(--tier-gold-dim);
   --color-tier-silver: var(--tier-silver);
   --color-tier-silver-dim: var(--tier-silver-dim);
   --color-tier-bronze: var(--tier-bronze);
   --color-tier-bronze-dim: var(--tier-bronze-dim);
-
-  /* Opaque card faces. A player card must never let the page — or the pitch
-     photograph behind it — show through, or the rating becomes unreadable. */
   --color-tier-gold-face: var(--tier-gold-face);
   --color-tier-gold-face-deep: var(--tier-gold-face-deep);
   --color-tier-silver-face: var(--tier-silver-face);
   --color-tier-silver-face-deep: var(--tier-silver-face-deep);
   --color-tier-bronze-face: var(--tier-bronze-face);
   --color-tier-bronze-face-deep: var(--tier-bronze-face-deep);
-
-  /* Attribute badges — sign of league_attributes.points */
   --color-attribute-positive: var(--attribute-positive);
   --color-attribute-negative: var(--attribute-negative);
-
   --color-pitch: var(--pitch);
-
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -82,130 +68,58 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-  --background: oklch(0.99 0.003 150);
-  --foreground: oklch(0.16 0.012 155);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.16 0.012 155);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.16 0.012 155);
-  --primary: oklch(0.5 0.15 148);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.008 150);
-  --secondary-foreground: oklch(0.21 0.015 155);
-  --muted: oklch(0.96 0.008 150);
-  --muted-foreground: oklch(0.5 0.015 155);
-  --accent: oklch(0.94 0.03 148);
-  --accent-foreground: oklch(0.21 0.015 155);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.9 0.008 150);
-  --input: oklch(0.9 0.008 150);
-  --ring: oklch(0.5 0.15 148);
-  /* Chart series, in slot order.
-
-     Eight hues rather than five, because the evolution chart plots up to eight
-     players at once, and in a fixed order rather than cycled: the order is what
-     makes adjacent series distinguishable under protanopia and deuteranopia.
-     Kept as hex — these are the exact values a colour-vision validator was run
-     against, and rewriting them in oklch would lose that audit trail.
-
-     Three of the light steps (aqua, yellow, magenta) sit below 3:1 against a
-     white surface, so every chart that uses them labels its series in the
-     legend rather than relying on the colour alone. */
-  --chart-1: #2a78d6;
-  --chart-2: #eb6834;
-  --chart-3: #1baf7a;
-  --chart-4: #eda100;
-  --chart-5: #e87ba4;
-  --chart-6: #008300;
-  --chart-7: #4a3aa7;
-  --chart-8: #e34948;
-  --radius: 0.625rem;
-  --sidebar: oklch(0.98 0.005 150);
-  --sidebar-foreground: oklch(0.16 0.012 155);
-  --sidebar-primary: oklch(0.5 0.15 148);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.94 0.03 148);
-  --sidebar-accent-foreground: oklch(0.21 0.015 155);
-  --sidebar-border: oklch(0.9 0.008 150);
-  --sidebar-ring: oklch(0.5 0.15 148);
-
-  --pitch: oklch(0.45 0.13 148);
-  --tier-gold: oklch(0.82 0.15 88);
-  --tier-gold-dim: oklch(0.6 0.12 78);
-  --tier-silver: oklch(0.8 0.012 250);
-  --tier-silver-dim: oklch(0.58 0.012 250);
-  --tier-bronze: oklch(0.66 0.11 55);
-  --tier-bronze-dim: oklch(0.46 0.09 48);
-
-  /* Light theme keeps the metal bright, so the face is a pale tint and the
-     text on it stays dark. */
-  --tier-gold-face: oklch(0.93 0.07 90);
-  --tier-gold-face-deep: oklch(0.83 0.11 82);
-  --tier-silver-face: oklch(0.94 0.008 250);
-  --tier-silver-face-deep: oklch(0.85 0.012 250);
-  --tier-bronze-face: oklch(0.9 0.05 58);
-  --tier-bronze-face-deep: oklch(0.78 0.09 50);
-  --attribute-positive: oklch(0.55 0.15 148);
-  --attribute-negative: oklch(0.55 0.19 25);
-}
-
+:root,
 .dark {
-  --background: oklch(0.16 0.014 158);
-  --foreground: oklch(0.96 0.004 150);
-  --card: oklch(0.21 0.018 158);
-  --card-foreground: oklch(0.96 0.004 150);
-  --popover: oklch(0.21 0.018 158);
-  --popover-foreground: oklch(0.96 0.004 150);
-  --primary: oklch(0.74 0.19 148);
-  --primary-foreground: oklch(0.17 0.03 155);
-  --secondary: oklch(0.27 0.02 158);
-  --secondary-foreground: oklch(0.96 0.004 150);
-  --muted: oklch(0.27 0.02 158);
-  --muted-foreground: oklch(0.7 0.015 152);
-  --accent: oklch(0.31 0.04 152);
-  --accent-foreground: oklch(0.96 0.004 150);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.74 0.19 148);
-  /* The same eight hues, stepped for the dark surface rather than flipped:
-     every slot clears 3:1 against it, so no series needs relief here. */
-  --chart-1: #3987e5;
-  --chart-2: #d95926;
-  --chart-3: #199e70;
-  --chart-4: #c98500;
-  --chart-5: #d55181;
-  --chart-6: #008300;
-  --chart-7: #9085e9;
-  --chart-8: #e66767;
-  --sidebar: oklch(0.19 0.017 158);
-  --sidebar-foreground: oklch(0.96 0.004 150);
-  --sidebar-primary: oklch(0.74 0.19 148);
-  --sidebar-primary-foreground: oklch(0.17 0.03 155);
-  --sidebar-accent: oklch(0.31 0.04 152);
-  --sidebar-accent-foreground: oklch(0.96 0.004 150);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.74 0.19 148);
-
-  --pitch: oklch(0.42 0.12 148);
-  --tier-gold: oklch(0.85 0.16 88);
-  --tier-gold-dim: oklch(0.53 0.13 76);
-  --tier-silver: oklch(0.85 0.012 250);
-  --tier-silver-dim: oklch(0.5 0.012 250);
-  --tier-bronze: oklch(0.72 0.12 55);
-  --tier-bronze-dim: oklch(0.4 0.09 46);
-
-  /* Dark theme: a deep metallic face, light enough to read white text on and
-     opaque enough to sit over the pitch photograph. */
-  --tier-gold-face: oklch(0.42 0.085 84);
-  --tier-gold-face-deep: oklch(0.25 0.055 72);
-  --tier-silver-face: oklch(0.4 0.012 250);
-  --tier-silver-face-deep: oklch(0.24 0.01 250);
-  --tier-bronze-face: oklch(0.38 0.07 52);
-  --tier-bronze-face-deep: oklch(0.23 0.05 44);
-  --attribute-positive: oklch(0.78 0.17 148);
-  --attribute-negative: oklch(0.7 0.2 25);
+  --background: #0b0d0c;
+  --foreground: #f2f3ec;
+  --card: #171b18;
+  --card-foreground: #f5f5f5;
+  --popover: #1c1c1c;
+  --popover-foreground: #f5f5f5;
+  --primary: #f0d34c;
+  --primary-foreground: #000000;
+  --secondary: #1c1c1c;
+  --secondary-foreground: #f5f5f5;
+  --muted: #242b25;
+  --muted-foreground: #a6afa7;
+  --accent: #2b2b2b;
+  --accent-foreground: #f5f5f5;
+  --destructive: #ff6b6b;
+  --border: #394139;
+  --input: #2b2b2b;
+  --ring: #eaaf35;
+  --chart-1: #eaaf35;
+  --chart-2: #82bd91;
+  --chart-3: #9c9c9c;
+  --chart-4: #c97538;
+  --chart-5: #d76d72;
+  --chart-6: #6d9c78;
+  --chart-7: #9f8ac7;
+  --chart-8: #6d9db8;
+  --radius: 0.125rem;
+  --sidebar: #000000;
+  --sidebar-foreground: #f5f5f5;
+  --sidebar-primary: #eaaf35;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #2b2b2b;
+  --sidebar-accent-foreground: #f5f5f5;
+  --sidebar-border: #2b2b2b;
+  --sidebar-ring: #eaaf35;
+  --pitch: #1d3427;
+  --tier-gold: #eaaf35;
+  --tier-gold-dim: #9d6d19;
+  --tier-silver: #d5d5d5;
+  --tier-silver-dim: #7f7f7f;
+  --tier-bronze: #c27b3b;
+  --tier-bronze-dim: #75431f;
+  --tier-gold-face: #3e2d11;
+  --tier-gold-face-deep: #18120a;
+  --tier-silver-face: #333333;
+  --tier-silver-face-deep: #171717;
+  --tier-bronze-face: #3c2417;
+  --tier-bronze-face-deep: #1b120d;
+  --attribute-positive: #eaaf35;
+  --attribute-negative: #ff6b6b;
 }
 
 @layer base {
@@ -213,19 +127,776 @@
     @apply border-border outline-ring/50;
   }
 
-  body {
-    @apply bg-background text-foreground;
-  }
-
   html {
     @apply font-sans;
+    background: var(--background);
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    min-width: 320px;
+    font-size: 0.875rem;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+}
+
+/* Shared competition surfaces use the same compact rhythm on every route. */
+.app-main > .flex {
+  gap: 1rem;
+}
+.app-main [data-slot='card'] {
+  --card-spacing: 0.75rem;
+  min-width: 0;
+  border-radius: 2px;
+  background: var(--card);
+  box-shadow: none;
+}
+.app-main [data-slot='card-title'] {
+  font-size: 1.25rem;
+  line-height: 1.15;
+  margin-top: 0;
+  gap: 0.5rem;
+}
+.app-main [data-slot='card-title'] svg {
+  width: 1rem;
+  height: 1rem;
+}
+.app-main [data-slot='card-content'] {
+  min-width: 0;
+  padding-top: 0;
+}
+.app-main [data-slot='card-header'] {
+  gap: 0.375rem;
+}
+.app-main [data-slot='table'] {
+  font-size: 0.75rem;
+}
+.app-main [data-slot='table-head'] {
+  height: 2rem;
+  font: 500 0.625rem var(--font-mono);
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  background: #202620;
+}
+.app-main [data-slot='table-cell'] {
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+.app-main [data-slot='table-row']:nth-child(even) {
+  background: #ffffff03;
+}
+.app-main [data-slot='table-row']:hover {
+  background: #f0d34c0d;
+}
+.app-main [data-slot='tabs-list'] {
+  height: auto;
+  min-height: 2.75rem;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: #121612;
+}
+.app-main [data-slot='tabs-trigger'] {
+  min-height: 2.25rem;
+  height: auto;
+  font-size: 0.875rem;
+  line-height: 1.15;
+  border-radius: 0;
+}
+.app-main [data-slot='tabs-content'] {
+  margin-top: 0.5rem;
+}
+.mobile-dock {
+  position: fixed;
+  z-index: 40;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 4px 6px calc(4px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: #111611;
+}
+.dock-link {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.625rem;
+  color: var(--muted-foreground);
+  border-top: 2px solid transparent;
+}
+.dock-link.is-active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: #f0d34c0a;
+}
+.dock-link:focus-visible {
+  outline: 2px solid var(--primary);
+}
+.league-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.league-masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 3px solid var(--primary);
+  padding-bottom: 0.75rem;
+}
+.league-masthead .section-kicker {
+  margin-bottom: 0.375rem;
+}
+.league-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+}
+.league-overview strong {
+  color: var(--foreground);
+}
+.league-overview a {
+  margin-left: auto;
+  color: var(--primary);
+}
+.league-fixtures {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.app-main .fixture-card {
+  display: grid;
+  grid-template-columns: minmax(0, 26%) minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.fixture-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.375rem;
+  padding: 0.625rem;
+}
+.fixture-teams {
+  display: flex;
+  flex-direction: column;
+  font: 700 1.25rem/1.05 var(--font-heading);
+  text-transform: uppercase;
+}
+.fixture-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.75rem;
+  font-size: 0.625rem;
+  color: var(--muted-foreground);
+}
+.fixture-meta > div {
+  min-width: 0;
+  max-width: 100%;
+}
+.fixture-meta svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+.fixture-featured .fixture-content {
+  padding: 0.875rem;
+  gap: 0.625rem;
+}
+.fixture-featured .fixture-teams {
+  font-size: 1.75rem;
+}
+.fixture-card [data-slot='badge'] {
+  font-size: 0.5625rem;
+  padding: 1px 4px;
+  border-radius: 0;
+}
+.leaderboard-rows {
+  display: flex;
+  flex-direction: column;
+}
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 0.5rem;
+  min-height: 2.625rem;
+  border-bottom: 1px solid #39413970;
+}
+.leaderboard-row:last-child {
+  border-bottom: 0;
+}
+.leaderboard-row:hover {
+  background: #f0d34c10;
+}
+.leaderboard-row > :last-child {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+}
+.award-sticker {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 0.5rem;
+}
+.award-photo {
+  width: 3.5rem;
+  height: 4rem;
+  flex-shrink: 0;
+}
+.award-photo img {
+  filter: grayscale(1);
+}
+.player-sticker {
+  background: #20251f;
+  background-image: none;
+  border-color: #72806b;
+  box-shadow: 2px 2px 0 #000;
+}
+.player-sticker::before {
+  display: none;
+}
+.player-sticker .sticker-portrait {
+  padding: 5px;
+  height: 8rem;
+  flex: none;
+}
+.player-sticker .sticker-photo {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  background: #c5cbc1;
+  box-shadow: none;
+}
+.sticker-photo img {
+  border-radius: 0;
+  filter: grayscale(1) contrast(1.05);
+  object-position: center 25%;
+}
+.sticker-photo::after {
+  border-radius: 0;
+  border: 0;
+}
+.sticker-photo > span {
+  border-radius: 0;
+}
+.sticker-photo [data-slot='avatar-fallback'] {
+  color: #27322b;
+  background: #bcc7b8;
+  border-radius: 0;
+}
+.sticker-rating {
+  padding: 4px;
+  background: #0b0d0ce8;
+  border: 1px solid #ffffff40;
+}
+.sticker-name {
+  background: #e1e5da;
+  color: #131c15;
+  border-color: #c0cabc;
+}
+.sticker-name h3 {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  text-transform: uppercase;
+}
+.sticker-metrics > * {
+  min-width: 0;
+}
+.sticker-metrics .numeric {
+  font-size: 0.875rem;
+}
+.sticker-footer {
+  margin-top: auto;
+}
+.player-sticker[data-showcase='true'] {
+  min-height: 0;
+}
+.player-sticker[data-showcase='true'] .sticker-portrait {
+  height: 15rem;
+}
+.player-sticker[data-showcase='true'] .sticker-name h3 {
+  font-size: 1.5rem;
+}
+.player-sticker[data-showcase='true'] .sticker-metrics .numeric {
+  font-size: 1.25rem;
+}
+.player-sticker[data-showcase='true'] .sticker-footer {
+  padding: 0.75rem;
+}
+.player-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 1rem;
+}
+.player-detail-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+.player-summary .numeric {
+  font-size: 1rem;
+}
+.player-summary > div {
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+}
+.player-summary > div:nth-child(-n + 2) .numeric {
+  font-size: 1.375rem;
+}
+.competition-podium > li > a {
+  min-height: 2.75rem;
+  padding: 0.25rem;
+  gap: 0.5rem;
+}
+.competition-podium [data-slot='avatar'] {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 2px;
+  box-shadow: none;
+}
+.competition-podium .text-lg {
+  font-size: 0.8125rem;
+}
+.competition-ranking [data-slot='avatar'] {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 2px;
+  box-shadow: none;
+}
+.competition-ranking .text-base {
+  font-size: 0.75rem;
+}
+.match-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 30%) minmax(0, 1fr);
+  border: 1px solid var(--border);
+  background: var(--card);
+  overflow: hidden;
+}
+.match-hero-art {
+  position: relative;
+  min-height: 10rem;
+}
+.match-hero-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem;
+}
+.match-hero h1 {
+  font-size: 1.5rem;
+  line-height: 1.05;
+}
+.match-hero h1 > :nth-child(2) {
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+.match-hero dl {
+  font-size: 0.6875rem;
+  padding-top: 0.5rem;
+  gap: 0.25rem;
+}
+.match-hero dl svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+.match-hero [data-slot='badge'] {
+  font-size: 0.5625rem;
+}
+.stats-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+.roster-toolbar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-block: 1px solid var(--border);
+}
+.roster-toolbar [data-slot='select-trigger'] {
+  height: 2.5rem;
+  font-size: 0.75rem;
+}
+.roster-toolbar input {
+  height: 2.5rem;
+}
+.roster-table th,
+.roster-table td {
+  padding-inline: 0.25rem;
+}
+.app-main .page-title + p {
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+}
+@media (min-width: 48rem) {
+  .league-fixtures {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  }
+  .league-fixtures > :only-child {
+    grid-column: 1 / -1;
+  }
+  .fixture-featured {
+    height: 100%;
+  }
+  .fixture-featured .fixture-teams {
+    font-size: 2.5rem;
+  }
+  .fixture-featured .fixture-meta {
+    font-size: 0.75rem;
+  }
+  .fixture-featured .fixture-content {
+    justify-content: center;
+  }
+  .player-detail-top {
+    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  }
+  .player-sticker .sticker-portrait {
+    height: 10rem;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .roster-toolbar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+  }
+  .match-hero h1 {
+    font-size: 2.25rem;
+  }
+  .match-hero-body {
+    padding: 1.25rem;
+  }
+}
+@media (min-width: 64rem) {
+  .mobile-dock {
+    display: none;
+  }
+  .app-main [data-slot='card-title'] {
+    font-size: 1.375rem;
+  }
+}
+@media (max-width: 47.999rem) {
+  .league-masthead .section-kicker {
+    display: none;
+  }
+  .league-fixtures .fixture-featured .fixture-content {
+    gap: 0.375rem;
+    padding: 0.625rem;
+  }
+  .league-fixtures .fixture-featured .fixture-teams {
+    font-size: 1.375rem;
+  }
+  .recent-fixtures .fixture-teams {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0 0.25rem;
+  }
+  .recent-fixtures .fixture-teams > span {
+    font-size: 1rem;
+  }
+  .fixture-squad {
+    padding-top: 0.375rem;
+  }
+  .fixture-squad [data-slot='avatar'] {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  .league-masthead > span {
+    display: none;
+  }
+  .league-dashboard {
+    gap: 0.875rem;
+  }
+  .league-masthead .page-title {
+    font-size: 1.75rem;
+  }
+  .league-overview {
+    font-size: 0.625rem;
+  }
+  .recent-fixtures .fixture-content {
+    padding: 0.375rem 0.625rem;
+    gap: 0.25rem;
+  }
+  .recent-fixtures .fixture-teams {
+    font-size: 1.125rem;
+  }
+  .recent-fixtures .fixture-meta > :last-child {
+    display: none;
+  }
+  .player-detail-top > .player-sticker {
+    display: grid;
+    grid-template-columns: 38% minmax(0, 1fr);
+  }
+  .player-detail-top .player-sticker[data-showcase='true'] .sticker-portrait {
+    grid-row: 1 / 4;
+    height: 100%;
+    min-height: 9rem;
+  }
+  .player-detail-top .sticker-name {
+    padding-right: 2rem;
+  }
+  .player-detail-top .sticker-name h3 {
+    font-size: 1.125rem;
+  }
+  .player-detail-top .sticker-footer {
+    padding: 0.375rem;
+  }
+  .player-detail-top .sticker-metrics {
+    gap: 2px;
+    padding: 0.375rem;
+  }
+  .player-detail-top .sticker-rating {
+    font-size: 1rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .motion-card,
+  .motion-card-photo img,
+  .motion-nav-link {
+    transition: none;
   }
 }
 
 @layer utilities {
-  /* Ratings and market values are read column-wise down a list; tabular
-     figures stop digits shifting between rows. */
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes soft-fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .app-main > * {
+      animation: soft-fade-in 260ms ease-out both;
+    }
+
+    .motion-enter {
+      animation: rise-in 180ms ease-out both;
+    }
+
+    .motion-page > .motion-enter:nth-of-type(2) {
+      animation-delay: 70ms;
+    }
+
+    .motion-page > .motion-enter:nth-of-type(3) {
+      animation-delay: 130ms;
+    }
+
+    .motion-page > .motion-enter:nth-of-type(4) {
+      animation-delay: 190ms;
+    }
+
+    .motion-card-photo img {
+      transition:
+        transform 480ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        filter 480ms ease;
+    }
+
+    .motion-card {
+      transition:
+        border-color 200ms ease,
+        box-shadow 200ms ease;
+    }
+
+    .motion-card-title {
+      transition: color 180ms ease;
+    }
+
+    .motion-nav-link {
+      transition:
+        transform 170ms ease,
+        border-color 170ms ease,
+        background-color 170ms ease,
+        color 170ms ease;
+    }
+
+    .motion-nav-link svg {
+      transition: transform 170ms ease;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .motion-card:hover {
+        border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+        box-shadow: 2px 2px 0 var(--primary);
+        transform: translateY(-1px);
+      }
+
+      .motion-card:hover .motion-card-photo img {
+        filter: saturate(1.08) contrast(1.03);
+        transform: scale(1.025);
+      }
+
+      .motion-card:hover .motion-card-title {
+        color: var(--primary);
+      }
+
+      .motion-nav-link:hover {
+        transform: translateX(3px);
+      }
+
+      .motion-nav-link:hover svg {
+        transform: scale(1.12);
+      }
+    }
+
+    .motion-grid > * {
+      animation: rise-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    .motion-grid > :nth-child(5n + 2) {
+      animation-delay: 45ms;
+    }
+
+    .motion-grid > :nth-child(5n + 3) {
+      animation-delay: 90ms;
+    }
+
+    .motion-grid > :nth-child(5n + 4) {
+      animation-delay: 135ms;
+    }
+
+    .motion-grid > :nth-child(5n) {
+      animation-delay: 180ms;
+    }
+  }
+
   .numeric {
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+
+  .liquid-panel {
+    background: #121612;
+    box-shadow: 0 2px 0 #000;
+  }
+
+  .liquid-viewer {
+    background:
+      radial-gradient(
+        circle at 50% 50%,
+        rgb(234 175 53 / 0.08),
+        transparent 55%
+      ),
+      rgb(0 0 0 / 0.9);
+    backdrop-filter: blur(28px) saturate(1.2);
+  }
+
+  .technical {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .section-kicker {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    color: var(--muted-foreground);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .section-kicker::before {
+    width: 1.75rem;
+    height: 2px;
+    content: '';
+    background: var(--primary);
+  }
+
+  .page-title {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .section-title {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .card-title {
+    font-family: var(--font-heading);
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .body-lead {
+    font-size: 0.875rem;
+    line-height: 1.55;
+  }
+
+  .body-copy {
+    font-size: 0.8125rem;
+    line-height: 1.55;
+  }
+
+  .body-meta {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+
+  @media (min-width: 64rem) {
+    .page-title {
+      font-size: 2.75rem;
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+    }
   }
 }

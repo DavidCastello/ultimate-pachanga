@@ -166,7 +166,7 @@ export function AdminSettingsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="text-2xl font-bold">Ajustes de la liga</h1>
+      <h1 className="page-title">Ajustes de la liga</h1>
 
       <Card>
         <CardHeader>

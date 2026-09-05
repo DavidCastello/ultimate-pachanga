@@ -41,7 +41,7 @@ import {
   type UnclaimedPlayer,
 } from '@/features/onboarding/api'
 import { getAvatarUrl } from '@/lib/supabase'
-import { APP_NAME } from '@/lib/env'
+import { BRAND_NAME, LOGO_URL } from '@/lib/brand'
 import { formatPosition, toInitials } from '@/lib/formatting'
 import { PLAYER_POSITIONS } from '@/types/domain'
 
@@ -433,12 +433,17 @@ export function OnboardingPage() {
 
   return (
     <main className="flex min-h-svh items-center justify-center p-4">
-      <Card className="w-full max-w-lg">
-        <CardHeader>
-          <CardTitle className="text-xl">
-            <h1>{APP_NAME}</h1>
+      <Card className="w-full max-w-xl border-primary/30 shadow-[0_24px_64px_rgb(0_0_0/0.6)]">
+        <CardHeader className="items-center border-b border-border text-center">
+          <img
+            src={LOGO_URL}
+            alt={BRAND_NAME}
+            className="size-24 object-contain"
+          />
+          <CardTitle className="text-4xl leading-none uppercase">
+            <h1>Únete a la liga</h1>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="body-copy max-w-md">
             {describeStep({
               isPending,
               hasLeague: Boolean(leagueId),

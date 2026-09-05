@@ -168,6 +168,22 @@ describe('PlayerCard', () => {
   })
 
   describe('compact variant, used on the pitch', () => {
+    it('uses the player photograph as the full card background', () => {
+      const { container } = renderWithProviders(
+        <PlayerCard
+          player={buildPlayerCard({ avatarPath: 'league/player.webp' })}
+          metrics={TEST_METRICS}
+          compact
+        />,
+      )
+
+      expect(container.querySelector('img')).toHaveClass(
+        'size-full',
+        'object-cover',
+        'object-top',
+      )
+    })
+
     it('keeps what identifies a player', () => {
       renderWithProviders(
         <PlayerCard

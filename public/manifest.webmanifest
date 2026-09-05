@@ -1,0 +1,17 @@
+{
+  "name": "Ultimate Pachangas",
+  "short_name": "Pachangas",
+  "description": "La competición entre amigos.",
+  "start_url": "./league",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "ultimate-pachangas-logo.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

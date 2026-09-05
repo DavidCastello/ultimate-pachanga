@@ -39,7 +39,7 @@ const SERIES_COLORS = [
 ]
 
 const MAXIMUM_SERIES = SERIES_COLORS.length
-const DEFAULT_SERIES = 7
+const DEFAULT_SERIES = 3
 
 /** The rating is bounded at 45 and 99; the axis gives it a little air. */
 const RATING_DOMAIN: [number, number] = [40, 100]

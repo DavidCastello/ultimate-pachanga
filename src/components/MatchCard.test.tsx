@@ -2,13 +2,15 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 import { MatchCard } from '@/components/MatchCard'
 import { renderWithProviders } from '@/test/render'
-import { buildMatch } from '@/test/factories'
+import { buildMatch, buildPlayerCard } from '@/test/factories'
 
 // The photograph is resolved through the Supabase storage client, which would
 // otherwise require a configured environment just to render a card.
 vi.mock('@/lib/supabase', () => ({
   getMatchPhotoUrl: (path: string | null) =>
     path ? `https://example.test/match-photos/${path}` : null,
+  getAvatarUrl: (path: string | null) =>
+    path ? `https://example.test/avatars/${path}` : null,
   supabase: {},
   MATCH_PHOTOS_BUCKET: 'match-photos',
 }))
@@ -82,5 +84,28 @@ describe('MatchCard', () => {
     expect(photo).toHaveAttribute('src', '/venues/uib.webp')
     // Decorative: the venue is already written out beside it.
     expect(photo).toHaveAttribute('alt', '')
+  })
+
+  it('keeps the featured squad as an avatar-only preview', () => {
+    const players = [
+      buildPlayerCard({
+        id: 'player-1',
+        displayName: 'Carlos Aznar',
+      }),
+      buildPlayerCard({
+        id: 'player-2',
+        displayName: 'Marc Vidal',
+      }),
+    ]
+
+    renderWithProviders(
+      <MatchCard match={buildMatch()} featured participants={players} />,
+    )
+
+    expect(screen.getByRole('group', { name: /convocados/i })).toBeVisible()
+    expect(screen.getByTitle('Carlos Aznar')).toBeVisible()
+    expect(screen.getByTitle('Marc Vidal')).toBeVisible()
+    expect(screen.queryByText('Carlos Aznar')).not.toBeInTheDocument()
+    expect(screen.queryByText('Marc Vidal')).not.toBeInTheDocument()
   })
 })

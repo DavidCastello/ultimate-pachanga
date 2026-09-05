@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { MatchCard } from '@/components/MatchCard'
 import { fetchMatches, matchKeys } from '@/features/matches/api'
-import { useMembership } from '@/features/league/useLeague'
+import { useLeague } from '@/features/league/useLeague'
 import { isUpcomingMatch } from '@/lib/matchLifecycle'
 import type { MatchRow } from '@/types/domain'
 
@@ -22,13 +22,13 @@ function MatchSection({
   if (matches.length === 0) return null
 
   return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-        {title}
-      </h2>
+    <section className="flex flex-col gap-2">
+      <div>
+        <h2 className="section-title">{title}</h2>
+      </div>
       {/* Two columns at most: the cards are wide so the venue photograph reads
           as a place rather than a texture. */}
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid gap-2 md:grid-cols-2">
         {matches.map((match) => (
           <MatchCard key={match.id} match={match} />
         ))}
@@ -38,7 +38,7 @@ function MatchSection({
 }
 
 export function MatchesPage() {
-  const { data: membership } = useMembership()
+  const { data: league } = useLeague()
 
   const {
     data: matches,
@@ -46,9 +46,9 @@ export function MatchesPage() {
     error,
     refetch,
   } = useQuery({
-    queryKey: matchKeys.list(membership?.leagueId ?? ''),
-    enabled: Boolean(membership),
-    queryFn: () => fetchMatches(membership!.leagueId),
+    queryKey: matchKeys.list(league?.id ?? ''),
+    enabled: Boolean(league),
+    queryFn: () => fetchMatches(league!.id),
   })
 
   // Fixtures ahead read best soonest-first; results read best newest-first.
@@ -63,18 +63,18 @@ export function MatchesPage() {
   const past = (matches ?? []).filter((match) => !isUpcomingMatch(match.status))
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Partidos</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="page-title">Partidos</h1>
+          <p className="mt-3 text-lg text-muted-foreground">
             {isPending
               ? 'Cargando partidos…'
               : `${upcoming.length} próximos · ${past.length} jugados`}
           </p>
         </div>
         <AdminOnly>
-          <Button asChild>
+          <Button asChild size="lg">
             <Link to="/matches/new">
               <Plus className="size-4" aria-hidden="true" />
               Nuevo partido
@@ -84,7 +84,7 @@ export function MatchesPage() {
       </div>
 
       {isPending ? (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid gap-4 xl:grid-cols-2 xl:gap-6">
           {Array.from({ length: 4 }, (_, index) => (
             <Skeleton key={index} className="h-32 rounded-xl" />
           ))}

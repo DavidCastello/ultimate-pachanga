@@ -61,7 +61,7 @@ export function MatchNewPage() {
         </Link>
       </Button>
 
-      <h1 className="text-2xl font-bold">Nuevo partido</h1>
+      <h1 className="page-title">Nuevo partido</h1>
 
       <Card className="max-w-2xl">
         <CardHeader>

@@ -147,6 +147,7 @@ export type Database = {
           category: Database["public"]["Enums"]["league_category"]
           created_at: string
           id: string
+          is_public: boolean
           market_constant_gbp: number
           status: Database["public"]["Enums"]["league_status"]
           title: string
@@ -156,6 +157,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["league_category"]
           created_at?: string
           id?: string
+          is_public?: boolean
           market_constant_gbp?: number
           status?: Database["public"]["Enums"]["league_status"]
           title: string
@@ -165,6 +167,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["league_category"]
           created_at?: string
           id?: string
+          is_public?: boolean
           market_constant_gbp?: number
           status?: Database["public"]["Enums"]["league_status"]
           title?: string
@@ -572,6 +575,7 @@ export type Database = {
       }
     }
     Functions: {
+      get_public_league_snapshot: { Args: never; Returns: Json }
       create_player_and_join: {
         Args: {
           p_first_name: string

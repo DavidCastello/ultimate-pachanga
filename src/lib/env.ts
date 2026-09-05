@@ -15,7 +15,7 @@ const environmentSchema = z.object({
   VITE_SUPABASE_PUBLISHABLE_KEY: z
     .string()
     .min(1, 'VITE_SUPABASE_PUBLISHABLE_KEY is required'),
-  VITE_APP_NAME: z.string().min(1).default('Ultimate Pachanga'),
+  VITE_APP_NAME: z.string().min(1).default('Ultimate Pachangas'),
 })
 
 function readEnvironment() {

@@ -67,7 +67,7 @@ const TIER_RULES: Record<CardTier, string> = {
  * treatment for each.
  */
 const CARD_EDGE =
-  'border bg-gradient-to-b shadow-[inset_0_1px_0_oklch(1_0_0/0.22),inset_0_-1px_0_oklch(0_0_0/0.25),0_2px_10px_oklch(0_0_0/0.45)]'
+  'border bg-gradient-to-b shadow-[inset_0_1px_0_oklch(1_0_0/0.22),inset_0_-1px_0_oklch(0_0_0/0.25),0_10px_24px_oklch(0_0_0/0.4)]'
 
 /** Short labels: a card has no room for "Mediocentro defensivo". */
 function toShortMetricLabel(metric: LeagueMetricRow): string {
@@ -85,15 +85,13 @@ function toShortMetricLabel(metric: LeagueMetricRow): string {
  * card from turning into a poster on the roomier bench grid.
  */
 const COMPACT_SIZES = {
-  rating: 'text-[clamp(0.5625rem,22cqi,1.125rem)]',
-  position: 'text-[clamp(0.375rem,12cqi,0.625rem)]',
-  form: 'size-[clamp(0.4375rem,10cqi,0.75rem)]',
-  confidence: 'size-[clamp(0.5rem,11cqi,0.8125rem)]',
-  alias: 'text-[clamp(0.5rem,14cqi,0.8125rem)]',
-  fullName: 'text-[clamp(0.4375rem,11cqi,0.6875rem)]',
-  initials: 'text-[clamp(0.5rem,18cqi,1.125rem)]',
-  /** Height, with the width following from the square ratio. */
-  photo: 'h-[clamp(1.25rem,52cqi,4rem)]',
+  rating: 'text-[clamp(0.6875rem,22cqi,1.125rem)]',
+  position: 'text-[clamp(0.5rem,12cqi,0.625rem)]',
+  form: 'size-[clamp(0.5rem,10cqi,0.75rem)]',
+  confidence: 'size-[clamp(0.5625rem,11cqi,0.8125rem)]',
+  alias: 'text-[clamp(0.625rem,14cqi,0.8125rem)]',
+  fullName: 'text-[clamp(0.5625rem,11cqi,0.6875rem)]',
+  initials: 'text-[clamp(0.625rem,18cqi,1.125rem)]',
 } as const
 
 interface PlayerCardProps {
@@ -103,6 +101,8 @@ interface PlayerCardProps {
   linkTo?: string
   /** The smaller card used on the pitch. */
   compact?: boolean
+  /** Enlarges the full-card composition for a profile or player detail view. */
+  showcase?: boolean
   className?: string
 }
 
@@ -111,6 +111,7 @@ export function PlayerCard({
   metrics,
   linkTo,
   compact,
+  showcase = false,
   className,
 }: PlayerCardProps) {
   const tier = toCardTier(player.cardRating)
@@ -127,18 +128,21 @@ export function PlayerCard({
       data-testid="player-card"
       data-tier={tier}
       data-compact={compact ? 'true' : undefined}
+      data-showcase={showcase ? 'true' : undefined}
       className={cn(
-        'relative flex flex-col overflow-hidden',
+        'relative flex h-full flex-col overflow-hidden',
         CARD_EDGE,
         TIER_FACES[tier],
         TIER_EDGES[tier],
+        "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[62%] before:bg-[radial-gradient(circle_at_50%_22%,rgb(234_175_53/0.24),transparent_64%)] before:content-['']",
         // Portrait, like a printed card. The pitch card is sized by its slot,
         // so it needs the ratio declared and becomes the query container its
         // own type is measured against; the grid card gets its height from the
         // metric and value bands below.
-        compact ? '@container aspect-[4/5] rounded-lg' : 'rounded-xl',
-        !compact &&
-          'transition-transform duration-200 motion-safe:hover:-translate-y-1',
+        compact
+          ? '@container aspect-[4/5] rounded-sm'
+          : 'player-sticker rounded-sm',
+        !compact && 'motion-card transition-all duration-200',
         !player.isActive && 'opacity-60 saturate-50',
         className,
       )}
@@ -157,6 +161,7 @@ export function PlayerCard({
           tier={tier}
           avatarUrl={avatarUrl}
           initials={initials}
+          showcase={showcase}
         />
       )}
     </article>
@@ -167,7 +172,7 @@ export function PlayerCard({
   return (
     <Link
       to={linkTo}
-      className="rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+      className="block h-full rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
       aria-label={`Ver ficha de ${player.displayName}`}
     >
       {card}
@@ -193,19 +198,43 @@ function CompactFace({ player, tier, avatarUrl, initials }: FaceProps) {
 
   return (
     <>
+      <div className="absolute inset-0 overflow-hidden bg-black/35">
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt=""
+            className="size-full object-cover object-top saturate-[0.92]"
+            loading="lazy"
+          />
+        ) : (
+          <div
+            className={cn(
+              'flex size-full items-center justify-center bg-[radial-gradient(circle_at_50%_35%,rgb(234_175_53/0.18),transparent_62%)] font-heading font-bold text-white/75',
+              COMPACT_SIZES.initials,
+            )}
+          >
+            {initials}
+          </div>
+        )}
+        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgb(0_0_0/0.18)_0%,transparent_35%,rgb(0_0_0/0.2)_52%,rgb(0_0_0/0.96)_100%)]" />
+      </div>
+
       <ConfidenceDonut
         value={player.confidencePct}
         className={cn(
-          'absolute top-[4cqi] right-[5cqi]',
+          'absolute top-[4cqi] right-[5cqi] z-10 shadow-[0_0_12px_rgb(234_175_53/0.4)]',
           COMPACT_SIZES.confidence,
         )}
       />
       <FormStateIcon
         state={player.formState}
-        className={cn('absolute top-[17cqi] right-[5cqi]', COMPACT_SIZES.form)}
+        className={cn(
+          'absolute top-[17cqi] right-[5cqi] z-10',
+          COMPACT_SIZES.form,
+        )}
       />
 
-      <div className="flex flex-col items-start gap-[1cqi] px-[6cqi] pt-[4cqi] leading-none">
+      <div className="absolute top-[4cqi] left-[5cqi] z-10 flex flex-col items-start gap-[1cqi] leading-none drop-shadow-[0_2px_4px_rgb(0_0_0/0.9)]">
         <span
           className={cn(
             'numeric font-black',
@@ -225,19 +254,9 @@ function CompactFace({ player, tier, avatarUrl, initials }: FaceProps) {
         </span>
       </div>
 
-      {/* Centred in whatever the two bands leave, and never taller than that. */}
-      <div className="flex min-h-0 flex-1 items-center justify-center py-[3cqi]">
-        <PlayerPhoto
-          avatarUrl={avatarUrl}
-          initials={initials}
-          className={cn('max-h-full w-auto', COMPACT_SIZES.photo)}
-          fallbackClassName={COMPACT_SIZES.initials}
-        />
-      </div>
-
       <div
         className={cn(
-          'border-t px-[5cqi] py-[3cqi] text-center leading-tight',
+          'absolute inset-x-0 bottom-0 z-10 border-t px-[5cqi] py-[4cqi] text-center leading-tight backdrop-blur-[1px]',
           TIER_RULES[tier],
         )}
       >
@@ -264,6 +283,7 @@ function CompactFace({ player, tier, avatarUrl, initials }: FaceProps) {
 
 interface FullFaceProps extends FaceProps {
   metrics: readonly LeagueMetricRow[]
+  showcase: boolean
 }
 
 /** The squad and detail card: the compact face plus the stats it has room for. */
@@ -273,6 +293,7 @@ function FullFace({
   tier,
   avatarUrl,
   initials,
+  showcase,
 }: FullFaceProps) {
   const fullName = formatFullName(player.firstName, player.lastName)
 
@@ -280,8 +301,14 @@ function FullFace({
     <>
       {/* Rating and position ride in the corner rather than taking a column of
           their own, which leaves the photograph the whole width. */}
-      <div className="absolute top-2.5 left-3 z-10 flex flex-col items-center leading-none">
-        <span className={cn('numeric text-2xl font-black', TIER_ACCENTS[tier])}>
+      <div className="sticker-rating absolute top-2.5 left-3 z-10 flex flex-col items-center leading-none">
+        <span
+          className={cn(
+            'numeric font-black',
+            showcase ? 'text-4xl' : 'text-2xl',
+            TIER_ACCENTS[tier],
+          )}
+        >
           {player.cardRating}
         </span>
         <span className="text-[0.625rem] font-bold tracking-wider opacity-80">
@@ -294,22 +321,36 @@ function FullFace({
         <FormStateIcon state={player.formState} className="size-4" />
       </div>
 
-      <div className="flex flex-1 items-center justify-center px-3 pt-3 pb-1">
+      <div className="sticker-portrait relative z-1 flex items-center justify-center">
         <PlayerPhoto
           avatarUrl={avatarUrl}
           initials={initials}
-          className="h-auto w-[64%] border-2"
-          fallbackClassName="text-2xl"
+          className={cn('sticker-photo h-auto w-full rounded-none border-0')}
+          fallbackClassName={showcase ? 'text-4xl' : 'text-2xl'}
         />
       </div>
 
       {/* The name band, ruled off the way a card prints it. */}
-      <div className={cn('border-t px-3 py-1.5 text-center', TIER_RULES[tier])}>
-        <h3 className="truncate text-sm font-bold" title={player.displayName}>
+      <div
+        className={cn(
+          'sticker-name flex min-h-10 flex-col justify-center border-t px-2 py-1 text-left',
+          TIER_RULES[tier],
+        )}
+      >
+        <h3
+          className={cn('truncate font-bold', showcase ? 'text-xl' : 'text-sm')}
+          title={player.displayName}
+        >
           {player.displayName}
         </h3>
         {fullName && fullName !== player.displayName ? (
-          <p className="truncate text-[0.6875rem] opacity-70" title={fullName}>
+          <p
+            className={cn(
+              'truncate opacity-70',
+              showcase ? 'text-sm' : 'text-[0.6875rem]',
+            )}
+            title={fullName}
+          >
             {fullName}
           </p>
         ) : null}
@@ -317,7 +358,7 @@ function FullFace({
 
       <div
         className={cn(
-          'grid grid-cols-4 gap-1 border-t px-2 py-2',
+          'sticker-metrics grid grid-cols-4 gap-1 border-t px-2 py-1.5',
           TIER_RULES[tier],
         )}
       >
@@ -332,7 +373,7 @@ function FullFace({
 
       <div
         className={cn(
-          'flex items-center justify-between border-t px-3 py-2 text-[0.6875rem]',
+          'sticker-footer flex flex-wrap items-center justify-between gap-1 border-t px-2 py-1.5 text-[0.6875rem]',
           TIER_RULES[tier],
         )}
       >
@@ -374,7 +415,7 @@ function ConfidenceDonut({
         aria-hidden="true"
         className="block size-full rounded-full"
         style={{
-          background: `conic-gradient(#38bdf8 ${bounded}%, rgb(15 23 42 / 0.72) 0)`,
+          background: `conic-gradient(var(--primary) ${bounded}%, rgb(0 0 0 / 0.72) 0)`,
         }}
       />
     </span>
@@ -440,7 +481,12 @@ function PlayerPhoto({
   fallbackClassName,
 }: PlayerPhotoProps) {
   return (
-    <Avatar className={cn('aspect-square border border-black/25', className)}>
+    <Avatar
+      className={cn(
+        'aspect-square border border-black/25 bg-black/20 shadow-[0_0_20px_rgb(234_175_53/0.22)]',
+        className,
+      )}
+    >
       {avatarUrl ? (
         <AvatarImage
           src={avatarUrl}

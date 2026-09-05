@@ -69,7 +69,7 @@ export function TeamPitch({
           share the one request, and deferring it leaves the line-up floating
           over a blank rectangle. */}
       <img
-        src="/pitch.webp"
+        src={`${import.meta.env.BASE_URL}pitch.webp`}
         alt=""
         className="absolute inset-0 size-full object-cover"
         draggable={false}
@@ -96,7 +96,7 @@ export function TeamPitch({
             style={{
               left: `${slot.x}%`,
               top: `${slot.y}%`,
-              width: `${CARD_WIDTH_PERCENT}%`,
+              width: `max(${CARD_WIDTH_PERCENT}%, 4rem)`,
               transform: 'translate(-50%, -50%)',
             }}
           >
@@ -111,7 +111,7 @@ export function TeamPitch({
                 }
                 aria-pressed={interactive ? isSelected : undefined}
                 className={cn(
-                  'rounded-lg outline-none',
+                  'rounded-lg drop-shadow-[0_10px_14px_rgb(234_175_53/0.2)] outline-none',
                   interactive && 'cursor-grab touch-none select-none',
                   interactive &&
                     'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',

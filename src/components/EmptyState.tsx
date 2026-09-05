@@ -31,7 +31,9 @@ export function EmptyState({
         <Icon className="size-8 text-muted-foreground" aria-hidden="true" />
       ) : null}
       <div className="space-y-1">
-        <p className="font-semibold">{title}</p>
+        <p className="font-heading text-2xl leading-none font-semibold uppercase">
+          {title}
+        </p>
         {description ? (
           <p className="max-w-prose text-sm text-muted-foreground">
             {description}

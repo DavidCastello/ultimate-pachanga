@@ -1,5 +1,6 @@
 import { supabase, MATCH_PHOTOS_BUCKET } from '@/lib/supabase'
 import { toImageExtension } from '@/lib/images'
+import { publicSnapshotForAnonymous } from '@/features/public/api'
 import type { Formation, SquadSize } from '@/lib/formations'
 import type { Json } from '@/types/database'
 import type {
@@ -18,6 +19,11 @@ export const matchKeys = {
 }
 
 export async function fetchMatches(leagueId: string): Promise<MatchRow[]> {
+  const publicSnapshot = await publicSnapshotForAnonymous()
+  if (publicSnapshot) {
+    return publicSnapshot.matches.filter((match) => match.league_id === leagueId)
+  }
+
   const { data, error } = await supabase
     .from('matches')
     .select('*')
@@ -29,6 +35,13 @@ export async function fetchMatches(leagueId: string): Promise<MatchRow[]> {
 }
 
 export async function fetchMatch(matchId: string): Promise<MatchRow> {
+  const publicSnapshot = await publicSnapshotForAnonymous()
+  if (publicSnapshot) {
+    const match = publicSnapshot.matches.find((entry) => entry.id === matchId)
+    if (!match) throw new Error('No se encontró el partido')
+    return match
+  }
+
   const { data, error } = await supabase
     .from('matches')
     .select('*')
@@ -59,6 +72,27 @@ export interface SquadMember {
 }
 
 export async function fetchSquad(matchId: string): Promise<SquadMember[]> {
+  const publicSnapshot = await publicSnapshotForAnonymous()
+  if (publicSnapshot) {
+    return publicSnapshot.squads
+      .filter((row) => row.match_id === matchId)
+      .map((row) => ({
+        playerId: row.player_id,
+        playerCode: '',
+        firstName: row.first_name,
+        lastName: row.last_name,
+        displayName:
+          row.nickname?.trim() || `${row.first_name} ${row.last_name}`,
+        preferredPosition: row.preferred_position,
+        teamSide: row.team_side,
+        pitchSlot: row.pitch_slot,
+        marketValueGbp: row.market_value_gbp,
+      }))
+      .sort((left, right) =>
+        left.displayName.localeCompare(right.displayName, 'es'),
+      )
+  }
+
   const { data, error } = await supabase
     .from('match_players')
     .select(
@@ -109,6 +143,25 @@ export interface MatchScoreEntry {
 export async function fetchMatchScores(
   matchId: string,
 ): Promise<MatchScoreEntry[]> {
+  const publicSnapshot = await publicSnapshotForAnonymous()
+  if (publicSnapshot) {
+    return publicSnapshot.scores
+      .filter((row) => row.match_id === matchId)
+      .map((row) => ({
+        playerId: row.player_id,
+        playerCode: '',
+        displayName: row.display_name,
+        metricScores: row.metric_scores,
+        goals: row.goals,
+        victory: Number(row.victory),
+        baseScore: row.base_score,
+        attributePoints: row.attribute_points,
+        finalScore: row.final_score,
+        attributes: row.attributes,
+      }))
+      .sort((left, right) => right.finalScore - left.finalScore)
+  }
+
   const { data, error } = await supabase
     .from('player_match_scores')
     .select(

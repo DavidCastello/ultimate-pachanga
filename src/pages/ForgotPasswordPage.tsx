@@ -5,17 +5,10 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2 } from 'lucide-react'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { AuthLayout } from '@/components/AuthLayout'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { requestPasswordReset } from '@/features/auth/api'
-import { APP_NAME } from '@/lib/env'
 
 const schema = z.object({
   email: z.string().min(1, 'Introduce tu correo').email('Correo no válido'),
@@ -50,15 +43,10 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-svh items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-xl">
-            <h1>Restablecer contraseña</h1>
-          </CardTitle>
-          <CardDescription>{APP_NAME}</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <AuthLayout
+      title="Recuperar acceso"
+      description="Te enviaremos un enlace seguro para elegir una contraseña nueva."
+    >
           {submitted ? (
             <div className="flex flex-col gap-4">
               <p role="status" className="text-sm text-muted-foreground">
@@ -105,8 +93,6 @@ export function ForgotPasswordPage() {
               </Link>
             </form>
           )}
-        </CardContent>
-      </Card>
-    </main>
+    </AuthLayout>
   )
 }

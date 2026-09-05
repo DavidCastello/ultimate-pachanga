@@ -9,6 +9,7 @@ import {
   type BaseTickContentProps,
 } from 'recharts'
 import { formatScore } from '@/lib/formatting'
+import { cn } from '@/lib/utils'
 import type { LeagueMetricRow, PlayerCardData } from '@/types/domain'
 
 /** Upper bound of the card scale the metric stats are drawn on. */
@@ -94,16 +95,24 @@ function toAngleTick(points: readonly MetricPoint[]) {
 interface MetricRadarChartProps {
   player: PlayerCardData
   metrics: readonly LeagueMetricRow[]
+  className?: string
 }
 
-export function MetricRadarChart({ player, metrics }: MetricRadarChartProps) {
+export function MetricRadarChart({
+  player,
+  metrics,
+  className,
+}: MetricRadarChartProps) {
   const points = toMetricPoints(player, metrics)
 
   // Three vertices is the least a radar can enclose; below that it is a line.
   if (points.length < 3) return null
 
   return (
-    <div className="h-72 w-full" data-testid="metric-radar-chart">
+    <div
+      className={cn('h-72 w-full', className)}
+      data-testid="metric-radar-chart"
+    >
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={points} outerRadius="68%">
           <PolarGrid stroke="var(--color-border)" />

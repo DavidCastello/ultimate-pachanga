@@ -1,26 +1,21 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
+import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3,
   CalendarDays,
-  LogOut,
   Menu,
+  LogIn,
+  LogOut,
   Settings,
   Shield,
-  ShieldCheck,
   UserCog,
   UserRound,
   Users,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Sheet,
   SheetContent,
@@ -28,16 +23,19 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 import { AdminOnly } from '@/components/AdminOnly'
+import { BrandLogoDialog } from '@/components/BrandLogoDialog'
 import { signOut } from '@/features/auth/api'
-import { useLeague } from '@/features/league/useLeague'
-import { APP_NAME } from '@/lib/env'
+import { useAuth } from '@/features/auth/useAuth'
+import { fetchPlayerCard, playerKeys } from '@/features/players/api'
+import { useMyPlayerId } from '@/features/players/useMyPlayer'
+import { BRAND_NAME, LOGO_URL } from '@/lib/brand'
+import { getAvatarUrl } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
 interface NavigationItem {
   to: string
   label: string
   icon: typeof Users
-  adminOnly?: boolean
 }
 
 const NAVIGATION: NavigationItem[] = [
@@ -45,6 +43,9 @@ const NAVIGATION: NavigationItem[] = [
   { to: '/players', label: 'Jugadores', icon: Users },
   { to: '/matches', label: 'Partidos', icon: CalendarDays },
   { to: '/stats', label: 'Estadísticas', icon: BarChart3 },
+]
+
+const PROFILE_NAVIGATION: NavigationItem[] = [
   { to: '/profile', label: 'Mi perfil', icon: UserRound },
 ]
 
@@ -56,10 +57,29 @@ const ADMIN_NAVIGATION: NavigationItem[] = [
 
 function navigationLinkClasses({ isActive }: { isActive: boolean }): string {
   return cn(
-    'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+    'motion-nav-link group flex min-h-11 items-center gap-3 border border-transparent px-3 py-2 font-heading text-lg leading-none font-semibold uppercase transition-colors',
     isActive
-      ? 'bg-accent text-accent-foreground'
-      : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+      ? 'border-primary bg-primary text-primary-foreground'
+      : 'text-muted-foreground hover:border-primary/35 hover:bg-accent/70 hover:text-foreground',
+  )
+}
+
+function ProfileNavigationAvatar() {
+  const { data: myPlayerId } = useMyPlayerId()
+  const { data: player } = useQuery({
+    queryKey: playerKeys.card(myPlayerId ?? ''),
+    enabled: Boolean(myPlayerId),
+    queryFn: () => fetchPlayerCard(myPlayerId!),
+  })
+  const avatarUrl = getAvatarUrl(player?.avatarPath)
+
+  return (
+    <Avatar className="size-7 border border-primary/60 shadow-[0_0_16px_rgb(234_175_53/0.24)]">
+      {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
+      <AvatarFallback className="bg-primary/15 text-primary">
+        <UserRound className="size-4" aria-hidden="true" />
+      </AvatarFallback>
+    </Avatar>
   )
 }
 
@@ -79,53 +99,117 @@ function NavigationLinks({
           onClick={onNavigate}
           className={navigationLinkClasses}
         >
-          <Icon className="size-4" aria-hidden="true" />
-          {label}
+          {to === '/profile' ? (
+            <ProfileNavigationAvatar />
+          ) : (
+            <Icon className="size-5 shrink-0" aria-hidden="true" />
+          )}
+          <span>{label}</span>
         </NavLink>
       ))}
     </>
   )
 }
 
-/**
- * Admin destinations, collapsed into a menu on desktop so the main bar stays
- * short. The mobile sheet lists them inline instead — a dropdown inside a
- * slide-over is awkward on a phone.
- */
-function AdminMenu() {
+function BrandLockup({
+  compact = false,
+  iconOnly = false,
+}: {
+  compact?: boolean
+  iconOnly?: boolean
+}) {
   return (
-    <AdminOnly>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="text-muted-foreground">
-            <ShieldCheck className="size-4" aria-hidden="true" />
-            Administración
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuLabel>Administración</DropdownMenuLabel>
-          {ADMIN_NAVIGATION.map(({ to, label, icon: Icon }) => (
-            <DropdownMenuItem key={to} asChild>
-              <Link to={to}>
-                <Icon className="size-4" aria-hidden="true" />
-                {label}
-              </Link>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </AdminOnly>
+    <Link
+      to="/league"
+      className={cn(
+        'flex min-w-0 items-center',
+        compact ? 'gap-2.5' : iconOnly ? 'w-fit' : 'w-full justify-center',
+      )}
+    >
+      <img
+        src={LOGO_URL}
+        alt={BRAND_NAME}
+        className={cn(
+          'object-contain',
+          compact
+            ? 'size-10 shrink-0'
+            : iconOnly
+              ? 'h-12 w-auto max-w-none'
+              : 'h-auto w-full max-w-28',
+        )}
+      />
+      {compact && !iconOnly ? (
+        <span className="truncate font-heading text-xl leading-none font-bold uppercase">
+          {BRAND_NAME}
+        </span>
+      ) : null}
+    </Link>
   )
 }
 
-/**
- * Shell for every signed-in page: a horizontal nav on desktop, a slide-over
- * sheet on mobile.
- */
+function DesktopSidebar({
+  onSignOut,
+  isAuthenticated,
+}: {
+  onSignOut: () => void
+  isAuthenticated: boolean
+}) {
+  return (
+    <aside className="sticky top-0 hidden h-svh w-52 shrink-0 flex-col overflow-y-auto border-r border-border bg-card px-3 py-4 lg:flex">
+      <BrandLockup />
+
+      <div className="mt-4 border-t border-primary/35 pt-3">
+        <p className="technical mb-3 px-3 text-[0.625rem] font-semibold text-muted-foreground uppercase">
+          Competición
+        </p>
+        <nav className="flex flex-col gap-1.5">
+          <NavigationLinks items={NAVIGATION} />
+          {isAuthenticated ? (
+            <NavigationLinks items={PROFILE_NAVIGATION} />
+          ) : null}
+        </nav>
+      </div>
+
+      <AdminOnly>
+        <div className="mt-8">
+          <p className="technical mb-3 px-3 text-[0.625rem] font-semibold text-muted-foreground uppercase">
+            Administración
+          </p>
+          <nav className="flex flex-col gap-1.5">
+            <NavigationLinks items={ADMIN_NAVIGATION} />
+          </nav>
+        </div>
+      </AdminOnly>
+
+      <div className="mt-auto border-t border-border pt-5">
+        {isAuthenticated ? (
+          <Button
+            variant="ghost"
+            onClick={onSignOut}
+            className="w-full justify-start text-muted-foreground"
+          >
+            <LogOut className="size-4" aria-hidden="true" />
+            Salir
+          </Button>
+        ) : (
+          <Button asChild className="w-full justify-start">
+            <Link to="/login">
+              <LogIn className="size-4" aria-hidden="true" />
+              Entrar o registrarme
+            </Link>
+          </Button>
+        )}
+      </div>
+    </aside>
+  )
+}
+
+/** Shell for every signed-in page. */
 export function AppLayout() {
-  const { data: league } = useLeague()
   const navigate = useNavigate()
+  const { session } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const isAuthenticated = Boolean(session)
 
   async function handleSignOut() {
     try {
@@ -139,29 +223,59 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-svh flex-col">
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-4">
+    <div className="flex min-h-svh bg-background">
+      <DesktopSidebar
+        onSignOut={() => void handleSignOut()}
+        isAuthenticated={isAuthenticated}
+      />
+
+      <div className="min-w-0 flex-1">
+        <header className="liquid-panel sticky top-0 z-40 grid h-14 grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center border-b border-primary/40 px-3 lg:hidden">
+          <BrandLogoDialog
+            className="justify-self-start"
+            imageClassName="size-11"
+          />
+
+          <Link
+            to="/league"
+            className="truncate text-center font-heading text-xl leading-none font-bold uppercase"
+          >
+            {BRAND_NAME}
+          </Link>
+
           <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <SheetTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden"
                 aria-label="Abrir menú"
+                className="justify-self-end"
               >
-                <Menu className="size-5" />
+                <Menu className="size-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 overflow-y-auto p-4">
-              <SheetTitle className="mb-4 text-base">{APP_NAME}</SheetTitle>
-              <nav className="flex flex-col gap-1">
+            <SheetContent
+              side="right"
+              className="liquid-panel w-72 overflow-y-auto p-4"
+            >
+              <SheetTitle className="sr-only">Navegación</SheetTitle>
+              <BrandLockup />
+              <nav className="mt-7 border-t border-primary/35 pt-6">
+                <p className="technical mb-3 px-3 text-[0.625rem] font-semibold text-muted-foreground uppercase">
+                  Competición
+                </p>
                 <NavigationLinks
                   items={NAVIGATION}
                   onNavigate={() => setIsMenuOpen(false)}
                 />
+                {isAuthenticated ? (
+                  <NavigationLinks
+                    items={PROFILE_NAVIGATION}
+                    onNavigate={() => setIsMenuOpen(false)}
+                  />
+                ) : null}
                 <AdminOnly>
-                  <p className="mt-4 px-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  <p className="technical mt-7 mb-2 px-3 text-[0.625rem] font-semibold text-muted-foreground uppercase">
                     Administración
                   </p>
                   <NavigationLinks
@@ -170,38 +284,59 @@ export function AppLayout() {
                   />
                 </AdminOnly>
               </nav>
+              {isAuthenticated ? (
+                <Button
+                  variant="ghost"
+                  onClick={() => void handleSignOut()}
+                  className="mt-8 w-full justify-start text-muted-foreground"
+                >
+                  <LogOut className="size-4" aria-hidden="true" />
+                  Salir
+                </Button>
+              ) : (
+                <Button asChild className="mt-8 w-full justify-start">
+                  <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                    <LogIn className="size-4" aria-hidden="true" />
+                    Entrar o registrarme
+                  </Link>
+                </Button>
+              )}
             </SheetContent>
           </Sheet>
+        </header>
 
-          <Link to="/league" className="flex min-w-0 items-center gap-2">
-            <span className="grid size-7 shrink-0 place-items-center rounded-md bg-primary/15 font-black text-primary">
-              R
-            </span>
-            <span className="truncate font-bold">
-              {league?.title ?? APP_NAME}
-            </span>
-          </Link>
-
-          <nav className="ml-4 hidden items-center gap-1 md:flex">
-            <NavigationLinks items={NAVIGATION} />
-            <AdminMenu />
-          </nav>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSignOut}
-            className="ml-auto"
-          >
-            <LogOut className="size-4" aria-hidden="true" />
-            <span className="sr-only sm:not-sr-only">Salir</span>
-          </Button>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
-        <Outlet />
-      </main>
+        <main className="app-main mx-auto w-full max-w-[1600px] px-3 pt-4 pb-24 sm:px-5 lg:px-7 lg:py-6">
+          <Outlet />
+        </main>
+        <nav
+          aria-label="Navegación principal móvil"
+          className="mobile-dock lg:hidden"
+        >
+          {[
+            ...NAVIGATION,
+            ...(isAuthenticated
+              ? PROFILE_NAVIGATION
+              : [{ to: '/login', label: 'Entrar', icon: LogIn }]),
+          ].map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                cn('dock-link', isActive && 'is-active')
+              }
+            >
+              <Icon className="size-5" aria-hidden="true" />
+              <span>
+                {label === 'Estadísticas'
+                  ? 'Stats'
+                  : label === 'Mi perfil'
+                    ? 'Perfil'
+                    : label}
+              </span>
+            </NavLink>
+          ))}
+        </nav>
+      </div>
     </div>
   )
 }

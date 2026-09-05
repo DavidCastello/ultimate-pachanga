@@ -104,7 +104,7 @@ export function AdminMembersPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-2xl font-bold">Miembros</h1>
+        <h1 className="page-title">Miembros</h1>
         <p className="text-sm text-muted-foreground">
           Quien se registra entra como miembro. Aquí decides quién administra.
         </p>

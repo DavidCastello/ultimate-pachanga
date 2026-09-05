@@ -5,17 +5,10 @@ import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { AuthLayout } from '@/components/AuthLayout'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { signOut, updatePassword } from '@/features/auth/api'
-import { APP_NAME } from '@/lib/env'
 
 const schema = z
   .object({
@@ -60,15 +53,10 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-svh items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-xl">
-            <h1>Cambiar contraseña</h1>
-          </CardTitle>
-          <CardDescription>{APP_NAME}</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <AuthLayout
+      title="Nueva contraseña"
+      description="Elige una contraseña segura para volver a entrar en la liga."
+    >
           <form
             onSubmit={handleSubmit(onSubmit)}
             className="flex flex-col gap-4"
@@ -111,8 +99,6 @@ export function ResetPasswordPage() {
               Cambiar contraseña
             </Button>
           </form>
-        </CardContent>
-      </Card>
-    </main>
+    </AuthLayout>
   )
 }

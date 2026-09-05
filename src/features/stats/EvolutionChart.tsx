@@ -80,7 +80,10 @@ export function EvolutionChart({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="h-80 w-full" data-testid="evolution-chart">
+      <div
+        className="h-[26rem] w-full lg:h-[36rem]"
+        data-testid="evolution-chart"
+      >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartRows}

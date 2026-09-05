@@ -129,7 +129,7 @@ export function toPlayerCardData(row: PlayerCardRow): PlayerCardData | null {
     // undefined leaking into a `number | null` field reaches the form as the
     // string "undefined".
     estimatedMarketValueGbp: row.estimated_market_value_gbp ?? null,
-    userId: row.user_id,
+    userId: row.user_id ?? null,
     matchesPlayed: row.matches_played ?? 0,
     careerAverage: row.career_average,
     latestScore: row.latest_score,

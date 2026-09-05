@@ -56,7 +56,7 @@ export function PodiumList({
   }
 
   return (
-    <ol className="flex flex-col divide-y divide-border/50">
+    <ol className="competition-podium flex flex-col gap-1">
       {players.map((player, position) => {
         const avatarUrl = getAvatarUrl(player.avatarPath)
 
@@ -64,15 +64,14 @@ export function PodiumList({
           <li
             key={player.id}
             data-testid={`podium-row-${position}`}
-            className="flex items-center gap-3 py-2"
+            className="group flex items-center rounded-sm transition-colors hover:bg-primary/10"
           >
-            <PodiumRank position={position} />
-
             <Link
               to={`/players/${player.id}`}
-              className="flex min-w-0 flex-1 items-center gap-2 hover:underline"
+              className="flex min-h-15 min-w-0 flex-1 items-center gap-3 border-l-2 border-transparent px-3 py-2 transition-colors group-hover:border-primary"
             >
-              <Avatar className="size-8 shrink-0">
+              <PodiumRank position={position} />
+              <Avatar className="size-11 shrink-0 border border-primary/55 shadow-[0_0_18px_rgb(234_175_53/0.22)] transition-transform group-hover:scale-105">
                 {avatarUrl ? (
                   <AvatarImage
                     src={avatarUrl}
@@ -90,7 +89,7 @@ export function PodiumList({
                 </AvatarFallback>
               </Avatar>
               <span className="min-w-0">
-                <span className="block truncate text-sm font-medium">
+                <span className="block truncate text-lg font-medium">
                   {player.displayName}
                 </span>
                 <span className="block truncate text-xs text-muted-foreground">
@@ -99,7 +98,7 @@ export function PodiumList({
               </span>
             </Link>
 
-            <span className="numeric shrink-0 text-sm font-bold">
+            <span className="numeric mr-3 shrink-0 text-lg font-bold text-primary">
               {renderValue(player)}
             </span>
           </li>

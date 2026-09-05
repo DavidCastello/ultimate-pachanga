@@ -322,16 +322,19 @@ export function PitchLineups({
           : 'valor actual, banquillo aparte'}
       </p>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-7 lg:grid-cols-2">
         {(['home', 'away'] as const).map((side) => {
           const formation = side === 'home' ? homeFormation : awayFormation
           const teamName = side === 'home' ? homeTeamName : awayTeamName
 
           return (
-            <div key={side} className="flex flex-col gap-2">
+            <div key={side} className="flex flex-col gap-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <h3 className="truncate text-sm font-bold" title={teamName}>
+                  <h3
+                    className="truncate font-heading text-2xl leading-none font-bold uppercase"
+                    title={teamName}
+                  >
                     {teamName}
                   </h3>
                   <MarketValue
